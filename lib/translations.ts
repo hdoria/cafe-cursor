@@ -45,6 +45,7 @@ export const translations = {
     // Errors
     notEligible: "Este email não está cadastrado no evento Cafe Cursor. Apenas participantes aprovados podem obter créditos.",
     notApproved: "Seu cadastro no evento ainda não foi aprovado. Por favor, entre em contato com o organizador.",
+    noCheckin: "Você precisa fazer check-in no evento antes de resgatar seu crédito. Por favor, procure o organizador.",
     noCreditsAvailable: "Desculpe, não há créditos disponíveis no momento. Por favor, entre em contato com o organizador.",
     networkError: "Erro de conexão. Por favor, tente novamente.",
     thinkError: "Acha que é um erro? Entre em contato com o organizador do evento.",
@@ -102,6 +103,7 @@ export const translations = {
     // Errors
     notEligible: "This email is not registered for Cafe Cursor event. Only approved attendees can get credits.",
     notApproved: "Your event registration hasn't been approved yet. Please contact the organizer.",
+    noCheckin: "You need to check in at the event before claiming your credit. Please find the organizer.",
     noCreditsAvailable: "Sorry, no credits are available at the moment. Please contact the organizer.",
     networkError: "Connection error. Please try again.",
     thinkError: "Think this is an error? Contact the event organizer.",
@@ -159,6 +161,7 @@ export const translations = {
     // Errors
     notEligible: "Este correo no está registrado en el evento Cafe Cursor. Solo los asistentes aprobados pueden obtener créditos.",
     notApproved: "Tu registro en el evento aún no ha sido aprobado. Por favor contacta al organizador.",
+    noCheckin: "Necesitas hacer check-in en el evento antes de reclamar tu crédito. Por favor, busca al organizador.",
     noCreditsAvailable: "Lo sentimos, no hay créditos disponibles en este momento. Por favor contacta al organizador.",
     networkError: "Error de conexión. Por favor intenta de nuevo.",
     thinkError: "¿Crees que es un error? Contacta al organizador del evento.",

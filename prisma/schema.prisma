@@ -20,6 +20,10 @@ model EligibleUser {
   approvalStatus String   @default("approved")
   createdAt      DateTime @default(now())
   
+  // Check-in no evento
+  hasCheckedIn   Boolean  @default(false)
+  checkedInAt    DateTime?
+  
   // Si ya reclamó su crédito
   hasClaimed     Boolean  @default(false)
   claimedAt      DateTime?

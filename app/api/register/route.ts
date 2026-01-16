@@ -55,6 +55,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Verificar se o usuário fez check-in no evento
+    if (!eligibleUser.hasCheckedIn) {
+      console.log(`⚠️ [REGISTER] Usuário não fez check-in: ${normalizedEmail}`);
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Você precisa fazer check-in no evento antes de resgatar seu crédito. Por favor, procure o organizador.",
+          code: "NO_CHECKIN",
+        },
+        { status: 403 }
+      );
+    }
+
     // 2. Verificar si ya reclamó su crédito
     if (eligibleUser.hasClaimed && eligibleUser.credit) {
       console.log(`⚠️ [REGISTER] Usuario ya reclamó crédito: ${normalizedEmail}`);

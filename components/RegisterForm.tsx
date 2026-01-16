@@ -92,6 +92,8 @@ export function RegisterForm() {
         return t("notEligible");
       case "NOT_APPROVED":
         return t("notApproved");
+      case "NO_CHECKIN":
+        return t("noCheckin");
       case "NO_CREDITS":
         return t("noCreditsAvailable");
       case "NETWORK_ERROR":

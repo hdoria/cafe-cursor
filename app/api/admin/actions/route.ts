@@ -255,6 +255,82 @@ export async function POST(request: NextRequest) {
         });
       }
 
+      case "CHECK_IN_USER": {
+        // Fazer check-in de um usuário no evento
+        const { userId } = data;
+
+        const user = await prisma.eligibleUser.findUnique({
+          where: { id: userId },
+        });
+
+        if (!user) {
+          return NextResponse.json(
+            { error: "Usuário não encontrado" },
+            { status: 404 }
+          );
+        }
+
+        if (user.hasCheckedIn) {
+          return NextResponse.json(
+            { error: "Usuário já fez check-in" },
+            { status: 400 }
+          );
+        }
+
+        await prisma.eligibleUser.update({
+          where: { id: userId },
+          data: {
+            hasCheckedIn: true,
+            checkedInAt: new Date(),
+          },
+        });
+
+        console.log(`✅ [ADMIN] Check-in realizado: ${user.email}`);
+
+        return NextResponse.json({
+          success: true,
+          message: `Check-in realizado para ${user.email}`,
+        });
+      }
+
+      case "UNDO_CHECK_IN": {
+        // Desfazer check-in de um usuário
+        const { userId } = data;
+
+        const user = await prisma.eligibleUser.findUnique({
+          where: { id: userId },
+        });
+
+        if (!user) {
+          return NextResponse.json(
+            { error: "Usuário não encontrado" },
+            { status: 404 }
+          );
+        }
+
+        if (!user.hasCheckedIn) {
+          return NextResponse.json(
+            { error: "Usuário não fez check-in" },
+            { status: 400 }
+          );
+        }
+
+        await prisma.eligibleUser.update({
+          where: { id: userId },
+          data: {
+            hasCheckedIn: false,
+            checkedInAt: null,
+          },
+        });
+
+        console.log(`↩️ [ADMIN] Check-in desfeito: ${user.email}`);
+
+        return NextResponse.json({
+          success: true,
+          message: `Check-in desfeito para ${user.email}`,
+        });
+      }
+
       case "SEND_CREDIT_EMAIL": {
         // Enviar/reenviar email con el link del crédito
         const { userId, locale } = data;

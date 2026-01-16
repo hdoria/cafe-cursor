@@ -23,6 +23,8 @@ interface EligibleUser {
   name: string;
   company: string | null;
   approvalStatus: string;
+  hasCheckedIn: boolean;
+  checkedInAt: string | null;
   hasClaimed: boolean;
   claimedAt: string | null;
   credit: Credit | null;
@@ -128,8 +130,20 @@ export default function AdminDashboard() {
   };
 
   const handleSendEmail = async (userId: string, email: string) => {
-    const locale = confirm(`¿Enviar email en portugués?\n\nOK = Português (pt-BR)\nCancelar = English (en)`) ? "pt-BR" : "en";
+    const locale = confirm(`Enviar email em português?\n\nOK = Português (pt-BR)\nCancelar = English (en)`) ? "pt-BR" : "en";
     await executeAction("SEND_CREDIT_EMAIL", { userId, locale });
+  };
+
+  const handleCheckIn = async (userId: string, email: string) => {
+    if (confirm(`Fazer check-in de ${email}?`)) {
+      await executeAction("CHECK_IN_USER", { userId });
+    }
+  };
+
+  const handleUndoCheckIn = async (userId: string, email: string) => {
+    if (confirm(`Desfazer check-in de ${email}?`)) {
+      await executeAction("UNDO_CHECK_IN", { userId });
+    }
   };
 
   // Filtrar datos
@@ -323,6 +337,7 @@ export default function AdminDashboard() {
                   <th className="px-4 py-3 font-medium">Email</th>
                   <th className="px-4 py-3 font-medium">Nome</th>
                   <th className="px-4 py-3 font-medium">Empresa</th>
+                  <th className="px-4 py-3 font-medium">Check-in</th>
                   <th className="px-4 py-3 font-medium">Status</th>
                   <th className="px-4 py-3 font-medium">Crédito</th>
                   <th className="px-4 py-3 font-medium">Ações</th>
@@ -334,6 +349,17 @@ export default function AdminDashboard() {
                     <td className="px-4 py-3 font-mono text-xs">{user.email}</td>
                     <td className="px-4 py-3">{user.name}</td>
                     <td className="px-4 py-3 text-gray-400">{user.company || "-"}</td>
+                    <td className="px-4 py-3">
+                      {user.hasCheckedIn ? (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-green-500/20 px-2 py-1 text-xs text-green-400">
+                          ✓ Check-in
+                        </span>
+                      ) : (
+                        <span className="rounded-full bg-gray-500/20 px-2 py-1 text-xs text-gray-400">
+                          Pendente
+                        </span>
+                      )}
+                    </td>
                     <td className="px-4 py-3">
                       <StatusBadge status={user.approvalStatus} />
                     </td>
@@ -348,8 +374,25 @@ export default function AdminDashboard() {
                       )}
                     </td>
                     <td className="px-4 py-3">
-                      <div className="flex gap-2">
-                        {!user.hasClaimed && user.approvalStatus === "approved" && (
+                      <div className="flex flex-wrap gap-2">
+                        {!user.hasCheckedIn ? (
+                          <button
+                            onClick={() => handleCheckIn(user.id, user.email)}
+                            disabled={actionLoading}
+                            className="rounded bg-green-600 px-2 py-1 text-xs hover:bg-green-700 disabled:opacity-50"
+                          >
+                            Check-in
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => handleUndoCheckIn(user.id, user.email)}
+                            disabled={actionLoading}
+                            className="rounded bg-gray-600 px-2 py-1 text-xs hover:bg-gray-700 disabled:opacity-50"
+                          >
+                            Desfazer
+                          </button>
+                        )}
+                        {!user.hasClaimed && user.approvalStatus === "approved" && user.hasCheckedIn && (
                           <>
                             <button
                               onClick={() => handleAssignCredit(user.email, false)}
