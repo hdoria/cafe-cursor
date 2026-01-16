@@ -932,7 +932,7 @@ function UploadGuestsModal({
         
         <p className="mb-4 text-sm text-gray-400">
           Faça upload do CSV exportado do Luma. O sistema vai importar os guests
-          com status "approved" e extrair nome e email automaticamente.
+          com status &quot;approved&quot; e extrair nome e email automaticamente.
         </p>
 
         <div className="space-y-4">
