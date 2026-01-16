@@ -1,11 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
-
-function isAuthenticated(): boolean {
-  const cookieStore = cookies();
-  return cookieStore.get("admin_session")?.value === "authenticated";
-}
+import { isAuthenticated } from "@/lib/auth";
 
 function parseCSVLine(line: string): string[] {
   const result: string[] = [];
@@ -28,7 +23,8 @@ function parseCSVLine(line: string): string[] {
 }
 
 export async function POST(request: NextRequest) {
-  if (!isAuthenticated()) {
+  const authenticated = await isAuthenticated();
+  if (!authenticated) {
     return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
   }
 
@@ -102,7 +98,7 @@ export async function POST(request: NextRequest) {
       }
 
       // Check if user already exists
-      const existing = await prisma.user.findUnique({
+      const existing = await prisma.eligibleUser.findUnique({
         where: { email },
       });
 
@@ -117,11 +113,10 @@ export async function POST(request: NextRequest) {
     let inserted = 0;
     for (const guest of guests) {
       try {
-        await prisma.user.create({
+        await prisma.eligibleUser.create({
           data: {
             email: guest.email,
             name: guest.name,
-            isEligible: true,
           },
         });
         inserted++;

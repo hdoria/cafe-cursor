@@ -1,15 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
-
-function isAuthenticated(): boolean {
-  const cookieStore = cookies();
-  return cookieStore.get("admin_session")?.value === "authenticated";
-}
+import { isAuthenticated } from "@/lib/auth";
 
 export async function POST(request: NextRequest) {
-  if (!isAuthenticated()) {
-    return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  const authenticated = await isAuthenticated();
+  if (!authenticated) {
+    return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
   }
 
   try {
