@@ -56,6 +56,7 @@ export default function AdminDashboard() {
   const [showAddUserModal, setShowAddUserModal] = useState(false);
   const [showAddCreditModal, setShowAddCreditModal] = useState(false);
   const [showUploadCsvModal, setShowUploadCsvModal] = useState(false);
+  const [showUploadGuestsModal, setShowUploadGuestsModal] = useState(false);
 
   // Verificar autenticación y cargar datos
   useEffect(() => {
@@ -272,7 +273,13 @@ export default function AdminDashboard() {
               onClick={() => setShowUploadCsvModal(true)}
               className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium hover:bg-emerald-700"
             >
-              📄 Upload CSV
+              📄 CSV Créditos
+            </button>
+            <button
+              onClick={() => setShowUploadGuestsModal(true)}
+              className="rounded-lg bg-purple-600 px-4 py-2 text-sm font-medium hover:bg-purple-700"
+            >
+              👥 CSV Guests
             </button>
             <button
               onClick={fetchDashboard}
@@ -448,6 +455,17 @@ export default function AdminDashboard() {
           onClose={() => setShowUploadCsvModal(false)}
           onSuccess={() => {
             setShowUploadCsvModal(false);
+            fetchDashboard();
+          }}
+        />
+      )}
+
+      {/* Modal Upload Guests */}
+      {showUploadGuestsModal && (
+        <UploadGuestsModal
+          onClose={() => setShowUploadGuestsModal(false)}
+          onSuccess={() => {
+            setShowUploadGuestsModal(false);
             fetchDashboard();
           }}
         />
@@ -754,6 +772,147 @@ function UploadCsvModal({
               className="flex-1 rounded-lg bg-emerald-600 py-3 font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
             >
               {loading ? "Importando..." : "Importar Créditos"}
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function UploadGuestsModal({
+  onClose,
+  onSuccess,
+}: {
+  onClose: () => void;
+  onSuccess: () => void;
+}) {
+  const [csvContent, setCsvContent] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState<{
+    success: boolean;
+    message: string;
+    errors?: string[];
+  } | null>(null);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        setCsvContent(event.target?.result as string);
+      };
+      reader.readAsText(file);
+    }
+  };
+
+  const handleSubmit = async () => {
+    if (!csvContent.trim()) {
+      alert("Por favor, selecione um arquivo CSV");
+      return;
+    }
+
+    setLoading(true);
+    setResult(null);
+
+    try {
+      const res = await fetch("/api/admin/upload-guests", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ csvContent }),
+      });
+
+      const data = await res.json();
+      setResult({
+        success: data.success || false,
+        message: data.message || data.error || "Erro desconhecido",
+        errors: data.errors,
+      });
+
+      if (data.success && data.inserted > 0) {
+        setTimeout(() => {
+          onSuccess();
+        }, 2000);
+      }
+    } catch (err) {
+      setResult({
+        success: false,
+        message: "Erro de conexão",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+      <div className="w-full max-w-lg rounded-xl border border-gray-800 bg-[#0a0a0a] p-6">
+        <h2 className="mb-4 text-lg font-bold">Importar Guests (Luma CSV)</h2>
+        
+        <p className="mb-4 text-sm text-gray-400">
+          Faça upload do CSV exportado do Luma. O sistema vai importar os guests
+          com status "approved" e extrair nome e email automaticamente.
+        </p>
+
+        <div className="space-y-4">
+          <div>
+            <label className="mb-2 block text-sm font-medium text-gray-300">
+              Selecionar arquivo CSV do Luma
+            </label>
+            <input
+              type="file"
+              accept=".csv"
+              onChange={handleFileChange}
+              className="w-full rounded-lg border border-gray-700 bg-gray-900 px-4 py-3 text-white file:mr-4 file:rounded file:border-0 file:bg-purple-600 file:px-4 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-purple-700"
+            />
+          </div>
+
+          {csvContent && (
+            <div className="rounded-lg border border-gray-700 bg-gray-900/50 p-3">
+              <p className="text-sm text-gray-400">
+                Arquivo carregado: {csvContent.split("\n").length - 1} linhas de dados
+              </p>
+            </div>
+          )}
+
+          {result && (
+            <div
+              className={`rounded-lg border p-4 ${
+                result.success
+                  ? "border-green-500/30 bg-green-500/10 text-green-400"
+                  : "border-red-500/30 bg-red-500/10 text-red-400"
+              }`}
+            >
+              <p className="font-medium">{result.message}</p>
+              {result.errors && result.errors.length > 0 && (
+                <div className="mt-2 max-h-32 overflow-y-auto text-xs">
+                  {result.errors.slice(0, 20).map((err, i) => (
+                    <p key={i} className="text-gray-400">{err}</p>
+                  ))}
+                  {result.errors.length > 20 && (
+                    <p className="text-gray-500 mt-1">... e mais {result.errors.length - 20} avisos</p>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        <div className="mt-6 flex gap-3">
+          <button
+            onClick={onClose}
+            disabled={loading}
+            className="flex-1 rounded-lg border border-gray-700 py-3 hover:bg-gray-800 disabled:opacity-50"
+          >
+            {result?.success ? "Fechar" : "Cancelar"}
+          </button>
+          {!result?.success && (
+            <button
+              onClick={handleSubmit}
+              disabled={loading || !csvContent.trim()}
+              className="flex-1 rounded-lg bg-purple-600 py-3 font-medium text-white hover:bg-purple-700 disabled:opacity-50"
+            >
+              {loading ? "Importando..." : "Importar Guests"}
             </button>
           )}
         </div>
