@@ -57,6 +57,7 @@ export default function AdminDashboard() {
   const [showAddCreditModal, setShowAddCreditModal] = useState(false);
   const [showUploadCsvModal, setShowUploadCsvModal] = useState(false);
   const [showUploadGuestsModal, setShowUploadGuestsModal] = useState(false);
+  const [showImportDropdown, setShowImportDropdown] = useState(false);
 
   // Verificar autenticación y cargar datos
   useEffect(() => {
@@ -144,7 +145,7 @@ export default function AdminDashboard() {
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#0a0a0a]">
-        <div className="text-white">Cargando dashboard...</div>
+        <div className="text-white">Carregando painel...</div>
       </div>
     );
   }
@@ -175,14 +176,14 @@ export default function AdminDashboard() {
             </svg>
             <div>
               <h1 className="text-lg font-bold">Cafe Cursor Admin</h1>
-              <p className="text-xs text-gray-400">Panel de Administración</p>
+              <p className="text-xs text-gray-400">Painel de Administração</p>
             </div>
           </div>
           <button
             onClick={handleLogout}
             className="rounded-lg border border-gray-700 px-4 py-2 text-sm hover:bg-gray-800"
           >
-            Cerrar Sesión
+            Sair
           </button>
         </div>
       </header>
@@ -191,12 +192,12 @@ export default function AdminDashboard() {
       <div className="relative mx-auto max-w-7xl px-4 py-6">
         <div className="mb-6 grid grid-cols-2 gap-4 md:grid-cols-4 lg:grid-cols-6">
           <StatCard
-            label="Créditos Totales"
+            label="Créditos Totais"
             value={data?.stats.totalCredits || 0}
             color="blue"
           />
           <StatCard
-            label="Disponibles"
+            label="Disponíveis"
             value={data?.stats.availableCredits || 0}
             color="green"
           />
@@ -211,12 +212,12 @@ export default function AdminDashboard() {
             color="purple"
           />
           <StatCard
-            label="Usuarios Elegibles"
+            label="Usuários Elegíveis"
             value={data?.stats.totalEligible || 0}
             color="cyan"
           />
           <StatCard
-            label="Han Reclamado"
+            label="Já Resgataram"
             value={data?.stats.claimedUsers || 0}
             color="pink"
           />
@@ -234,7 +235,7 @@ export default function AdminDashboard() {
                   : "border border-gray-700 hover:bg-gray-800"
               }`}
             >
-              👥 Usuarios ({data?.eligibleUsers.length})
+              👥 Usuários ({data?.eligibleUsers.length})
             </button>
             <button
               onClick={() => setActiveTab("credits")}
@@ -248,11 +249,11 @@ export default function AdminDashboard() {
             </button>
           </div>
 
-          {/* Búsqueda y acciones */}
+          {/* Busca e ações */}
           <div className="flex gap-2">
             <input
               type="text"
-              placeholder="Buscar..."
+              placeholder="Buscar por email ou nome..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="rounded-lg border border-gray-700 bg-gray-900 px-4 py-2 text-sm placeholder:text-gray-500 focus:border-white focus:outline-none"
@@ -261,7 +262,7 @@ export default function AdminDashboard() {
               onClick={() => setShowAddUserModal(true)}
               className="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium hover:bg-green-700"
             >
-              + Usuario
+              + Usuário
             </button>
             <button
               onClick={() => setShowAddCreditModal(true)}
@@ -269,18 +270,36 @@ export default function AdminDashboard() {
             >
               + Crédito
             </button>
-            <button
-              onClick={() => setShowUploadCsvModal(true)}
-              className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium hover:bg-emerald-700"
-            >
-              📄 CSV Créditos
-            </button>
-            <button
-              onClick={() => setShowUploadGuestsModal(true)}
-              className="rounded-lg bg-purple-600 px-4 py-2 text-sm font-medium hover:bg-purple-700"
-            >
-              👥 CSV Guests
-            </button>
+            <div className="relative">
+              <button
+                onClick={() => setShowImportDropdown(!showImportDropdown)}
+                className="rounded-lg bg-purple-600 px-4 py-2 text-sm font-medium hover:bg-purple-700"
+              >
+                📥 Importar ▾
+              </button>
+              {showImportDropdown && (
+                <div className="absolute right-0 top-full mt-1 z-50 w-48 rounded-lg border border-gray-700 bg-gray-900 py-1 shadow-xl">
+                  <button
+                    onClick={() => {
+                      setShowUploadCsvModal(true);
+                      setShowImportDropdown(false);
+                    }}
+                    className="w-full px-4 py-2 text-left text-sm hover:bg-gray-800"
+                  >
+                    🎫 Créditos (CSV)
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowUploadGuestsModal(true);
+                      setShowImportDropdown(false);
+                    }}
+                    className="w-full px-4 py-2 text-left text-sm hover:bg-gray-800"
+                  >
+                    👥 Guests (Luma CSV)
+                  </button>
+                </div>
+              )}
+            </div>
             <button
               onClick={fetchDashboard}
               disabled={actionLoading}
@@ -291,18 +310,18 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        {/* Tabla de Usuarios */}
+        {/* Tabela de Usuários */}
         {activeTab === "users" && (
           <div className="overflow-x-auto rounded-xl border border-gray-800">
             <table className="w-full text-left text-sm">
               <thead className="border-b border-gray-800 bg-gray-900/50">
                 <tr>
                   <th className="px-4 py-3 font-medium">Email</th>
-                  <th className="px-4 py-3 font-medium">Nombre</th>
+                  <th className="px-4 py-3 font-medium">Nome</th>
                   <th className="px-4 py-3 font-medium">Empresa</th>
-                  <th className="px-4 py-3 font-medium">Estado</th>
+                  <th className="px-4 py-3 font-medium">Status</th>
                   <th className="px-4 py-3 font-medium">Crédito</th>
-                  <th className="px-4 py-3 font-medium">Acciones</th>
+                  <th className="px-4 py-3 font-medium">Ações</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-800">
@@ -321,7 +340,7 @@ export default function AdminDashboard() {
                           {user.credit?.isTest && " (TEST)"}
                         </span>
                       ) : (
-                        <span className="text-gray-500">Sin asignar</span>
+                        <span className="text-gray-500">Não atribuído</span>
                       )}
                     </td>
                     <td className="px-4 py-3">
@@ -333,7 +352,7 @@ export default function AdminDashboard() {
                               disabled={actionLoading}
                               className="rounded bg-blue-600 px-2 py-1 text-xs hover:bg-blue-700 disabled:opacity-50"
                             >
-                              Asignar
+                              Atribuir
                             </button>
                             <button
                               onClick={() => handleAssignCredit(user.email, true)}
@@ -350,7 +369,7 @@ export default function AdminDashboard() {
                               onClick={() => handleSendEmail(user.id, user.email)}
                               disabled={actionLoading}
                               className="rounded bg-cyan-600 px-2 py-1 text-xs hover:bg-cyan-700 disabled:opacity-50"
-                              title="Enviar email con el link del crédito"
+                              title="Enviar email com o link do crédito"
                             >
                               📧 Email
                             </button>
@@ -359,7 +378,7 @@ export default function AdminDashboard() {
                               disabled={actionLoading}
                               className="rounded bg-red-600 px-2 py-1 text-xs hover:bg-red-700 disabled:opacity-50"
                             >
-                              Revocar
+                              Revogar
                             </button>
                           </>
                         )}
@@ -372,7 +391,7 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* Tabla de Créditos */}
+        {/* Tabela de Créditos */}
         {activeTab === "credits" && (
           <div className="overflow-x-auto rounded-xl border border-gray-800">
             <table className="w-full text-left text-sm">
@@ -381,8 +400,8 @@ export default function AdminDashboard() {
                   <th className="px-4 py-3 font-medium">Código</th>
                   <th className="px-4 py-3 font-medium">Link</th>
                   <th className="px-4 py-3 font-medium">Tipo</th>
-                  <th className="px-4 py-3 font-medium">Estado</th>
-                  <th className="px-4 py-3 font-medium">Asignado</th>
+                  <th className="px-4 py-3 font-medium">Status</th>
+                  <th className="px-4 py-3 font-medium">Atribuído</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-800">
@@ -410,13 +429,13 @@ export default function AdminDashboard() {
                         </span>
                       ) : (
                         <span className="rounded-full bg-green-500/20 px-2 py-1 text-xs text-green-400">
-                          Disponible
+                          Disponível
                         </span>
                       )}
                     </td>
                     <td className="px-4 py-3 text-xs text-gray-400">
                       {credit.assignedAt
-                        ? new Date(credit.assignedAt).toLocaleDateString("es")
+                        ? new Date(credit.assignedAt).toLocaleDateString("pt-BR")
                         : "-"}
                     </td>
                   </tr>
@@ -427,7 +446,7 @@ export default function AdminDashboard() {
         )}
       </div>
 
-      {/* Modal Agregar Usuario */}
+      {/* Modal Adicionar Usuário */}
       {showAddUserModal && (
         <AddUserModal
           onClose={() => setShowAddUserModal(false)}
@@ -438,7 +457,7 @@ export default function AdminDashboard() {
         />
       )}
 
-      {/* Modal Agregar Crédito */}
+      {/* Modal Adicionar Crédito */}
       {showAddCreditModal && (
         <AddCreditModal
           onClose={() => setShowAddCreditModal(false)}
@@ -523,7 +542,7 @@ function AddUserModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
       <div className="w-full max-w-md rounded-xl border border-gray-800 bg-[#0a0a0a] p-6">
-        <h2 className="mb-4 text-lg font-bold">Agregar Usuario Elegible</h2>
+        <h2 className="mb-4 text-lg font-bold">Adicionar Usuário Elegível</h2>
         <div className="space-y-4">
           <input
             type="email"
@@ -534,7 +553,7 @@ function AddUserModal({
           />
           <input
             type="text"
-            placeholder="Nombre"
+            placeholder="Nome"
             value={name}
             onChange={(e) => setName(e.target.value)}
             className="w-full rounded-lg border border-gray-700 bg-gray-900 px-4 py-3 text-white placeholder:text-gray-500 focus:border-white focus:outline-none"
@@ -558,7 +577,7 @@ function AddUserModal({
             onClick={() => onSubmit({ email, name, company, approvalStatus: "approved" })}
             className="flex-1 rounded-lg bg-white py-3 font-medium text-black hover:opacity-90"
           >
-            Agregar
+            Adicionar
           </button>
         </div>
       </div>
@@ -580,11 +599,11 @@ function AddCreditModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
       <div className="w-full max-w-md rounded-xl border border-gray-800 bg-[#0a0a0a] p-6">
-        <h2 className="mb-4 text-lg font-bold">Agregar Crédito</h2>
+        <h2 className="mb-4 text-lg font-bold">Adicionar Crédito</h2>
         <div className="space-y-4">
           <input
             type="text"
-            placeholder="Código (ej: ABC123XYZ)"
+            placeholder="Código (ex: ABC123XYZ)"
             value={code}
             onChange={(e) => setCode(e.target.value)}
             className="w-full rounded-lg border border-gray-700 bg-gray-900 px-4 py-3 text-white placeholder:text-gray-500 focus:border-white focus:outline-none"
@@ -603,7 +622,7 @@ function AddCreditModal({
               onChange={(e) => setIsTest(e.target.checked)}
               className="h-4 w-4 rounded border-gray-700 bg-gray-900"
             />
-            <span className="text-sm text-gray-300">Es crédito de prueba (TEST)</span>
+            <span className="text-sm text-gray-300">É crédito de teste (TEST)</span>
           </label>
         </div>
         <div className="mt-6 flex gap-3">
@@ -617,7 +636,7 @@ function AddCreditModal({
             onClick={() => onSubmit({ code, link, isTest })}
             className="flex-1 rounded-lg bg-white py-3 font-medium text-black hover:opacity-90"
           >
-            Agregar
+            Adicionar
           </button>
         </div>
       </div>
