@@ -15,18 +15,18 @@ const LanguageContext = createContext<LanguageContextType | null>(null);
 export function LanguageProvider({ children }: { children: ReactNode }) {
   const [locale, setLocaleState] = useState<Locale>("pt-BR");
   const [isLoading, setIsLoading] = useState(true);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
     const saved = localStorage.getItem("cafe-cursor-locale") as Locale | null;
     if (saved && (saved === "pt-BR" || saved === "en" || saved === "es")) {
-      console.log(`🌐 [LOCALE] Carregado do localStorage: ${saved}`);
       setLocaleState(saved);
     }
     setIsLoading(false);
   }, []);
 
   const setLocale = (newLocale: Locale) => {
-    console.log(`🌐 [LOCALE] Mudando idioma para: ${newLocale}`);
     setLocaleState(newLocale);
     localStorage.setItem("cafe-cursor-locale", newLocale);
   };
@@ -34,6 +34,14 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   const t = (key: TranslationKey): string => {
     return translations[locale][key];
   };
+
+  if (!mounted) {
+    return (
+      <LanguageContext.Provider value={{ locale: "pt-BR", setLocale, t, isLoading: true }}>
+        {children}
+      </LanguageContext.Provider>
+    );
+  }
 
   return (
     <LanguageContext.Provider value={{ locale, setLocale, t, isLoading }}>
