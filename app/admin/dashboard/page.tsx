@@ -64,6 +64,7 @@ export default function AdminDashboard() {
   const [showUploadCsvModal, setShowUploadCsvModal] = useState(false);
   const [showUploadGuestsModal, setShowUploadGuestsModal] = useState(false);
   const [showImportDropdown, setShowImportDropdown] = useState(false);
+  const [checkInUser, setCheckInUser] = useState<EligibleUser | null>(null);
 
   // Verificar autenticación y cargar datos
   useEffect(() => {
@@ -134,16 +135,14 @@ export default function AdminDashboard() {
     await executeAction("SEND_CREDIT_EMAIL", { userId, locale });
   };
 
-  const handleCheckIn = async (userId: string, email: string) => {
-    if (confirm(`Fazer check-in de ${email}?`)) {
-      await executeAction("CHECK_IN_USER", { userId });
-    }
+  const handleCheckIn = async (userId: string) => {
+    await executeAction("CHECK_IN_USER", { userId });
+    setCheckInUser(null);
   };
 
-  const handleUndoCheckIn = async (userId: string, email: string) => {
-    if (confirm(`Desfazer check-in de ${email}?`)) {
-      await executeAction("UNDO_CHECK_IN", { userId });
-    }
+  const handleUndoCheckIn = async (userId: string) => {
+    await executeAction("UNDO_CHECK_IN", { userId });
+    setCheckInUser(null);
   };
 
   // Filtrar datos
@@ -375,23 +374,17 @@ export default function AdminDashboard() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex flex-wrap gap-2">
-                        {!user.hasCheckedIn ? (
-                          <button
-                            onClick={() => handleCheckIn(user.id, user.email)}
-                            disabled={actionLoading}
-                            className="rounded bg-green-600 px-2 py-1 text-xs hover:bg-green-700 disabled:opacity-50"
-                          >
-                            Check-in
-                          </button>
-                        ) : (
-                          <button
-                            onClick={() => handleUndoCheckIn(user.id, user.email)}
-                            disabled={actionLoading}
-                            className="rounded bg-gray-600 px-2 py-1 text-xs hover:bg-gray-700 disabled:opacity-50"
-                          >
-                            Desfazer
-                          </button>
-                        )}
+                        <button
+                          onClick={() => setCheckInUser(user)}
+                          disabled={actionLoading}
+                          className={`rounded px-2 py-1 text-xs disabled:opacity-50 ${
+                            user.hasCheckedIn 
+                              ? "bg-gray-600 hover:bg-gray-700" 
+                              : "bg-green-600 hover:bg-green-700"
+                          }`}
+                        >
+                          {user.hasCheckedIn ? "Ver Check-in" : "Check-in"}
+                        </button>
                         {!user.hasClaimed && user.approvalStatus === "approved" && user.hasCheckedIn && (
                           <>
                             <button
@@ -545,6 +538,17 @@ export default function AdminDashboard() {
             setShowUploadGuestsModal(false);
             fetchDashboard();
           }}
+        />
+      )}
+
+      {/* Modal Check-in */}
+      {checkInUser && (
+        <CheckInModal
+          user={checkInUser}
+          onClose={() => setCheckInUser(null)}
+          onCheckIn={() => handleCheckIn(checkInUser.id)}
+          onUndoCheckIn={() => handleUndoCheckIn(checkInUser.id)}
+          loading={actionLoading}
         />
       )}
     </div>
@@ -992,6 +996,170 @@ function UploadGuestsModal({
               {loading ? "Importando..." : "Importar Guests"}
             </button>
           )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CheckInModal({
+  user,
+  onClose,
+  onCheckIn,
+  onUndoCheckIn,
+  loading,
+}: {
+  user: EligibleUser;
+  onClose: () => void;
+  onCheckIn: () => void;
+  onUndoCheckIn: () => void;
+  loading: boolean;
+}) {
+  const getInitials = (name: string) => {
+    return name
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2);
+  };
+
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return "-";
+    const date = new Date(dateString);
+    return date.toLocaleDateString("pt-BR", {
+      day: "numeric",
+      month: "short",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
+  const getStatusLabel = (status: string) => {
+    const labels: Record<string, string> = {
+      approved: "Confirmado",
+      pending_approval: "Pendente",
+      declined: "Recusado",
+      waitlist: "Lista de espera",
+      invited: "Convidado",
+    };
+    return labels[status] || status;
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+      <div className="w-full max-w-md rounded-2xl border border-gray-700 bg-[#1a1a1a] shadow-2xl">
+        {/* Header com avatar e info */}
+        <div className="flex items-start justify-between p-6 pb-4">
+          <div className="flex items-center gap-4">
+            {/* Avatar */}
+            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-purple-500 to-pink-500 text-lg font-bold text-white">
+              {getInitials(user.name)}
+            </div>
+            {/* Nome e email */}
+            <div>
+              <h2 className="text-xl font-semibold text-white">{user.name}</h2>
+              <p className="text-sm text-gray-400">{user.email}</p>
+            </div>
+          </div>
+          {/* Badge de status */}
+          <span
+            className={`rounded-full px-3 py-1 text-xs font-medium ${
+              user.approvalStatus === "approved"
+                ? "bg-green-500/20 text-green-400 border border-green-500/30"
+                : user.approvalStatus === "pending_approval"
+                ? "bg-yellow-500/20 text-yellow-400 border border-yellow-500/30"
+                : "bg-gray-500/20 text-gray-400 border border-gray-500/30"
+            }`}
+          >
+            {getStatusLabel(user.approvalStatus)}
+          </span>
+        </div>
+
+        {/* Separador */}
+        <div className="border-t border-gray-700/50" />
+
+        {/* Informações */}
+        <div className="space-y-4 p-6">
+          {/* Empresa */}
+          {user.company && (
+            <div>
+              <p className="text-xs uppercase tracking-wider text-gray-500">Empresa</p>
+              <p className="mt-1 text-white">{user.company}</p>
+            </div>
+          )}
+
+          {/* Status do check-in */}
+          <div>
+            <p className="text-xs uppercase tracking-wider text-gray-500">Check-in</p>
+            <div className="mt-1 flex items-center gap-2">
+              {user.hasCheckedIn ? (
+                <>
+                  <span className="inline-flex h-2 w-2 rounded-full bg-green-500" />
+                  <span className="text-green-400">
+                    Feito em {formatDate(user.checkedInAt)}
+                  </span>
+                </>
+              ) : (
+                <>
+                  <span className="inline-flex h-2 w-2 rounded-full bg-gray-500" />
+                  <span className="text-gray-400">Pendente</span>
+                </>
+              )}
+            </div>
+          </div>
+
+          {/* Crédito */}
+          <div>
+            <p className="text-xs uppercase tracking-wider text-gray-500">Crédito Cursor</p>
+            <div className="mt-1">
+              {user.hasClaimed ? (
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex h-2 w-2 rounded-full bg-blue-500" />
+                  <span className="text-blue-400">
+                    Resgatado: {user.credit?.code}
+                    {user.credit?.isTest && " (TEST)"}
+                  </span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex h-2 w-2 rounded-full bg-gray-500" />
+                  <span className="text-gray-400">Não resgatado</span>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Separador */}
+        <div className="border-t border-gray-700/50" />
+
+        {/* Botões */}
+        <div className="flex gap-3 p-6">
+          {user.hasCheckedIn ? (
+            <button
+              onClick={onUndoCheckIn}
+              disabled={loading}
+              className="flex-1 rounded-xl bg-orange-600 py-3 text-base font-medium text-white transition-colors hover:bg-orange-700 disabled:opacity-50"
+            >
+              {loading ? "Processando..." : "Desfazer Check-in"}
+            </button>
+          ) : (
+            <button
+              onClick={onCheckIn}
+              disabled={loading}
+              className="flex-1 rounded-xl bg-green-500 py-3 text-base font-medium text-white transition-colors hover:bg-green-600 disabled:opacity-50"
+            >
+              {loading ? "Processando..." : "Check In"}
+            </button>
+          )}
+          <button
+            onClick={onClose}
+            disabled={loading}
+            className="rounded-xl bg-gray-700 px-6 py-3 text-base font-medium text-white transition-colors hover:bg-gray-600 disabled:opacity-50"
+          >
+            Fechar
+          </button>
         </div>
       </div>
     </div>
