@@ -3,16 +3,13 @@
 import { useLanguage } from "./LanguageContext";
 import { Locale } from "@/lib/translations";
 
-/**
- * Selector de idioma con banderas
- * Brasil 🇧🇷 | USA/UK 🇺🇸
- */
 export function LanguageSelector() {
   const { locale, setLocale } = useLanguage();
 
   const languages: { code: Locale; flag: string; label: string }[] = [
     { code: "pt-BR", flag: "🇧🇷", label: "PT" },
     { code: "en", flag: "🇺🇸", label: "EN" },
+    { code: "es", flag: "🇪🇸", label: "ES" },
   ];
 
   return (

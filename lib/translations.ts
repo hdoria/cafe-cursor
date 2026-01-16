@@ -1,4 +1,4 @@
-export type Locale = "pt-BR" | "en";
+export type Locale = "pt-BR" | "en" | "es";
 
 export const translations = {
   "pt-BR": {
@@ -114,6 +114,63 @@ export const translations = {
     
     // Email
     emailSent: "📧 We sent the credit to your email!",
+  },
+  "es": {
+    // Header
+    title: "Cafe Cursor",
+    subtitle: "Obtén tu crédito gratuito de Cursor IDE.",
+    cta: "Regístrate en segundos.",
+    
+    // Form
+    nameLabel: "Nombre",
+    namePlaceholder: "Tu nombre completo",
+    emailLabel: "Correo electrónico",
+    emailPlaceholder: "El correo que usaste en el registro",
+    emailHint: "Usa el mismo correo con el que te registraste en Luma",
+    submitButton: "Obtener mi crédito",
+    submitting: "Verificando...",
+    
+    // Footer
+    footerNote: "Solo los participantes registrados en el evento pueden obtener créditos.",
+    onePerPerson: "Un crédito por persona.",
+    madeBy: "Hecho por",
+    ambassadors: "Chris & Alex",
+    ambassadorTitle: "Cursor Ambassador Brasil",
+    poweredBy: "Powered by",
+    
+    // Badge
+    creditsAvailable: "créditos disponibles",
+    noCredits: "Sin créditos disponibles",
+    loading: "Cargando...",
+    alreadyClaimed: "participantes ya reclamaron",
+    of: "de",
+    
+    // Success
+    successTitle: "¡Crédito asignado!",
+    alreadyHaveCredit: "¡Ya tienes tu crédito!",
+    congratsMessage: "¡Felicidades! Aquí está tu crédito de Cursor:",
+    registeredAs: "Registrado como:",
+    testWarning: "⚠️ Este es un crédito de PRUEBA (no válido para uso real)",
+    yourCredit: "Tu crédito de Cursor",
+    copyLink: "Copiar enlace",
+    useCredit: "Usar crédito →",
+    saveLink: "Guarda este enlace, es único y personal.",
+    
+    // Errors
+    notEligible: "Este correo no está registrado en el evento Cafe Cursor. Solo los asistentes aprobados pueden obtener créditos.",
+    notApproved: "Tu registro en el evento aún no ha sido aprobado. Por favor contacta al organizador.",
+    noCreditsAvailable: "Lo sentimos, no hay créditos disponibles en este momento. Por favor contacta al organizador.",
+    networkError: "Error de conexión. Por favor intenta de nuevo.",
+    thinkError: "¿Crees que es un error? Contacta al organizador del evento.",
+    pendingApproval: "Tu solicitud está pendiente de aprobación.",
+    tryAnotherEmail: "Intentar con otro correo",
+    
+    // Share
+    shareOnX: "Compartir en X",
+    shareMessage: "🚀 ¡Acabo de obtener un crédito de @cursor_ai en Cafe Cursor Floripa! Muchas gracias a la comunidad por esta increíble oportunidad de probar el mejor editor de código con IA. #CafeCursorFloripa #CursorAI #DevCommunity",
+    
+    // Email
+    emailSent: "📧 ¡Enviamos el crédito a tu correo!",
   },
 } as const;
 

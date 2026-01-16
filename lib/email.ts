@@ -42,7 +42,7 @@ interface SendCreditEmailParams {
   creditCode: string;
   company?: string;
   isTest?: boolean;
-  locale?: "pt-BR" | "en";
+  locale?: "pt-BR" | "en" | "es";
 }
 
 /**
@@ -77,6 +77,8 @@ export async function sendCreditEmail({
   try {
     const subject = locale === "pt-BR" 
       ? "🎉 Seu crédito Cursor está aqui! - Cafe Cursor Floripa"
+      : locale === "es"
+      ? "🎉 ¡Tu crédito de Cursor está aquí! - Cafe Cursor Floripa"
       : "🎉 Your Cursor credit is here! - Cafe Cursor Floripa";
 
     const html = generateEmailHTML({
@@ -122,38 +124,55 @@ function generateEmailHTML({
   locale,
 }: Omit<SendCreditEmailParams, "to">): string {
   const isPtBR = locale === "pt-BR";
+  const isEs = locale === "es";
 
   const texts = {
-    greeting: isPtBR ? `Olá, ${name}!` : `Hello, ${name}!`,
+    greeting: isPtBR ? `Olá, ${name}!` : isEs ? `¡Hola, ${name}!` : `Hello, ${name}!`,
     thanks: isPtBR 
       ? "Obrigado por participar do Cafe Cursor Floripa!" 
+      : isEs
+      ? "¡Gracias por participar en Cafe Cursor Floripa!"
       : "Thank you for joining Cafe Cursor Floripa!",
     intro: isPtBR
       ? "Estamos muito felizes em ter você na nossa comunidade. Aqui está seu crédito exclusivo do Cursor IDE:"
+      : isEs
+      ? "Estamos muy felices de tenerte en nuestra comunidad. Aquí está tu crédito exclusivo de Cursor IDE:"
       : "We're thrilled to have you in our community. Here's your exclusive Cursor IDE credit:",
-    yourCredit: isPtBR ? "Seu Crédito Cursor" : "Your Cursor Credit",
-    code: isPtBR ? "Código" : "Code",
-    useCredit: isPtBR ? "Usar Meu Crédito" : "Use My Credit",
+    yourCredit: isPtBR ? "Seu Crédito Cursor" : isEs ? "Tu Crédito Cursor" : "Your Cursor Credit",
+    code: isPtBR ? "Código" : isEs ? "Código" : "Code",
+    useCredit: isPtBR ? "Usar Meu Crédito" : isEs ? "Usar Mi Crédito" : "Use My Credit",
     testWarning: isPtBR 
       ? "⚠️ Este é um crédito de TESTE (não válido para uso real)"
+      : isEs
+      ? "⚠️ Este es un crédito de PRUEBA (no válido para uso real)"
       : "⚠️ This is a TEST credit (not valid for real use)",
-    howToUse: isPtBR ? "Como usar:" : "How to use:",
+    howToUse: isPtBR ? "Como usar:" : isEs ? "Cómo usar:" : "How to use:",
     step1: isPtBR 
       ? "Clique no botão acima ou copie o link"
+      : isEs
+      ? "Haz clic en el botón de arriba o copia el enlace"
       : "Click the button above or copy the link",
     step2: isPtBR 
       ? "Faça login ou crie sua conta no Cursor"
+      : isEs
+      ? "Inicia sesión o crea tu cuenta en Cursor"
       : "Sign in or create your Cursor account",
     step3: isPtBR 
       ? "O crédito será aplicado automaticamente!"
+      : isEs
+      ? "¡El crédito se aplicará automáticamente!"
       : "The credit will be applied automatically!",
     questions: isPtBR
       ? "Dúvidas? Entre em contato com os organizadores do evento."
+      : isEs
+      ? "¿Preguntas? Contacta a los organizadores del evento."
       : "Questions? Contact the event organizers.",
     footer: isPtBR
       ? "Feito com ☕ por Chris & Alex - Cursor Ambassador Brasil"
+      : isEs
+      ? "Hecho con ☕ por Chris & Alex - Cursor Ambassador Brasil"
       : "Made with ☕ by Chris & Alex - Cursor Ambassador Brasil",
-    companyLabel: isPtBR ? "Empresa" : "Company",
+    companyLabel: isPtBR ? "Empresa" : isEs ? "Empresa" : "Company",
   };
 
   return `
