@@ -55,6 +55,7 @@ export default function AdminDashboard() {
   const [searchTerm, setSearchTerm] = useState("");
   const [showAddUserModal, setShowAddUserModal] = useState(false);
   const [showAddCreditModal, setShowAddCreditModal] = useState(false);
+  const [showUploadCsvModal, setShowUploadCsvModal] = useState(false);
 
   // Verificar autenticación y cargar datos
   useEffect(() => {
@@ -268,6 +269,12 @@ export default function AdminDashboard() {
               + Crédito
             </button>
             <button
+              onClick={() => setShowUploadCsvModal(true)}
+              className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium hover:bg-emerald-700"
+            >
+              📄 Upload CSV
+            </button>
+            <button
               onClick={fetchDashboard}
               disabled={actionLoading}
               className="rounded-lg border border-gray-700 px-4 py-2 text-sm hover:bg-gray-800 disabled:opacity-50"
@@ -434,6 +441,17 @@ export default function AdminDashboard() {
           }}
         />
       )}
+
+      {/* Modal Upload CSV */}
+      {showUploadCsvModal && (
+        <UploadCsvModal
+          onClose={() => setShowUploadCsvModal(false)}
+          onSuccess={() => {
+            setShowUploadCsvModal(false);
+            fetchDashboard();
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -583,6 +601,161 @@ function AddCreditModal({
           >
             Agregar
           </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function UploadCsvModal({
+  onClose,
+  onSuccess,
+}: {
+  onClose: () => void;
+  onSuccess: () => void;
+}) {
+  const [csvContent, setCsvContent] = useState("");
+  const [isTest, setIsTest] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState<{
+    success: boolean;
+    message: string;
+    errors?: string[];
+  } | null>(null);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        setCsvContent(event.target?.result as string);
+      };
+      reader.readAsText(file);
+    }
+  };
+
+  const handleSubmit = async () => {
+    if (!csvContent.trim()) {
+      alert("Por favor, selecione um arquivo CSV ou cole o conteúdo");
+      return;
+    }
+
+    setLoading(true);
+    setResult(null);
+
+    try {
+      const res = await fetch("/api/admin/upload-credits", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ csvContent, isTest }),
+      });
+
+      const data = await res.json();
+      setResult({
+        success: data.success || false,
+        message: data.message || data.error || "Erro desconhecido",
+        errors: data.errors,
+      });
+
+      if (data.success && data.inserted > 0) {
+        setTimeout(() => {
+          onSuccess();
+        }, 2000);
+      }
+    } catch (err) {
+      setResult({
+        success: false,
+        message: "Erro de conexão",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+      <div className="w-full max-w-lg rounded-xl border border-gray-800 bg-[#0a0a0a] p-6">
+        <h2 className="mb-4 text-lg font-bold">Upload de Créditos (CSV)</h2>
+        
+        <p className="mb-4 text-sm text-gray-400">
+          Formato esperado: cada linha com o link do crédito (o código será extraído automaticamente)
+          <br />
+          Exemplo: <code className="text-emerald-400">https://cursor.com/referral?code=ABC123,Nome</code>
+        </p>
+
+        <div className="space-y-4">
+          <div>
+            <label className="mb-2 block text-sm font-medium text-gray-300">
+              Selecionar arquivo CSV
+            </label>
+            <input
+              type="file"
+              accept=".csv,.txt"
+              onChange={handleFileChange}
+              className="w-full rounded-lg border border-gray-700 bg-gray-900 px-4 py-3 text-white file:mr-4 file:rounded file:border-0 file:bg-emerald-600 file:px-4 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-emerald-700"
+            />
+          </div>
+
+          <div>
+            <label className="mb-2 block text-sm font-medium text-gray-300">
+              Ou cole o conteúdo CSV aqui
+            </label>
+            <textarea
+              value={csvContent}
+              onChange={(e) => setCsvContent(e.target.value)}
+              placeholder="https://cursor.com/referral?code=ABC123,Nome&#10;https://cursor.com/referral?code=XYZ789,Nome"
+              rows={6}
+              className="w-full rounded-lg border border-gray-700 bg-gray-900 px-4 py-3 text-white placeholder:text-gray-500 focus:border-white focus:outline-none font-mono text-sm"
+            />
+          </div>
+
+          <label className="flex items-center gap-3">
+            <input
+              type="checkbox"
+              checked={isTest}
+              onChange={(e) => setIsTest(e.target.checked)}
+              className="h-4 w-4 rounded border-gray-700 bg-gray-900"
+            />
+            <span className="text-sm text-gray-300">Marcar como créditos de teste (TEST)</span>
+          </label>
+
+          {result && (
+            <div
+              className={`rounded-lg border p-4 ${
+                result.success
+                  ? "border-green-500/30 bg-green-500/10 text-green-400"
+                  : "border-red-500/30 bg-red-500/10 text-red-400"
+              }`}
+            >
+              <p className="font-medium">{result.message}</p>
+              {result.errors && result.errors.length > 0 && (
+                <div className="mt-2 max-h-32 overflow-y-auto text-xs">
+                  {result.errors.map((err, i) => (
+                    <p key={i} className="text-gray-400">{err}</p>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        <div className="mt-6 flex gap-3">
+          <button
+            onClick={onClose}
+            disabled={loading}
+            className="flex-1 rounded-lg border border-gray-700 py-3 hover:bg-gray-800 disabled:opacity-50"
+          >
+            {result?.success ? "Fechar" : "Cancelar"}
+          </button>
+          {!result?.success && (
+            <button
+              onClick={handleSubmit}
+              disabled={loading || !csvContent.trim()}
+              className="flex-1 rounded-lg bg-emerald-600 py-3 font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
+            >
+              {loading ? "Importando..." : "Importar Créditos"}
+            </button>
+          )}
         </div>
       </div>
     </div>
