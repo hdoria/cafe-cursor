@@ -47,3 +47,30 @@ model Credit {
   // Relación con el usuario asignado
   assignedTo  EligibleUser?
 }
+
+// Categorias de documentação
+model DocCategory {
+  id        String       @id @default(cuid())
+  name      String
+  slug      String       @unique
+  order     Int          @default(0)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+  
+  articles  DocArticle[]
+}
+
+// Artigos de documentação
+model DocArticle {
+  id         String      @id @default(cuid())
+  title      String
+  slug       String      @unique
+  content    String      // Conteúdo em Markdown
+  order      Int         @default(0)
+  isPublished Boolean    @default(true)
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+  
+  category   DocCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  categoryId String
+}

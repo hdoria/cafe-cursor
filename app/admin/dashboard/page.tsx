@@ -196,12 +196,20 @@ export default function AdminDashboard() {
               <p className="text-xs text-gray-400">Painel de Administração</p>
             </div>
           </div>
-          <button
-            onClick={handleLogout}
-            className="rounded-lg border border-gray-700 px-4 py-2 text-sm hover:bg-gray-800"
-          >
-            Sair
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => router.push("/admin/dashboard/docs")}
+              className="rounded-lg border border-gray-700 px-4 py-2 text-sm hover:bg-gray-800"
+            >
+              📚 Documentação
+            </button>
+            <button
+              onClick={handleLogout}
+              className="rounded-lg border border-gray-700 px-4 py-2 text-sm hover:bg-gray-800"
+            >
+              Sair
+            </button>
+          </div>
         </div>
       </header>
 
