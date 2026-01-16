@@ -40,6 +40,14 @@ export async function GET(request: NextRequest) {
         { assignedAt: "desc" },
         { createdAt: "desc" },
       ],
+      include: {
+        assignedTo: {
+          select: {
+            email: true,
+            name: true,
+          },
+        },
+      },
       take: 100,
     });
 

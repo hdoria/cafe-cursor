@@ -11,6 +11,10 @@ interface Credit {
   isTest: boolean;
   assignedAt: string | null;
   createdAt: string;
+  assignedTo: {
+    email: string;
+    name: string;
+  } | null;
 }
 
 interface EligibleUser {
@@ -401,7 +405,8 @@ export default function AdminDashboard() {
                   <th className="px-4 py-3 font-medium">Link</th>
                   <th className="px-4 py-3 font-medium">Tipo</th>
                   <th className="px-4 py-3 font-medium">Status</th>
-                  <th className="px-4 py-3 font-medium">Atribuído</th>
+                  <th className="px-4 py-3 font-medium">Usuário</th>
+                  <th className="px-4 py-3 font-medium">Data</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-800">
@@ -431,6 +436,16 @@ export default function AdminDashboard() {
                         <span className="rounded-full bg-green-500/20 px-2 py-1 text-xs text-green-400">
                           Disponível
                         </span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3">
+                      {credit.assignedTo ? (
+                        <div className="flex flex-col">
+                          <span className="text-xs text-white">{credit.assignedTo.name}</span>
+                          <span className="text-xs text-gray-500">{credit.assignedTo.email}</span>
+                        </div>
+                      ) : (
+                        <span className="text-xs text-gray-500">-</span>
                       )}
                     </td>
                     <td className="px-4 py-3 text-xs text-gray-400">
