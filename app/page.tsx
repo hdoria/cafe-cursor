@@ -65,18 +65,9 @@ export default function Home() {
 
       {/* Footer */}
       <footer className="mt-16 text-center animate-fade-in" style={{ animationDelay: "0.2s" }}>
-        {/* Créditos */}
         <div className="flex flex-col items-center gap-3">
-          <p className="text-sm text-muted">
-            {t("madeBy")}{" "}
-            <span className="font-semibold text-foreground">{t("ambassadors")}</span>
-          </p>
-          <p className="text-xs text-muted/70">
-            {t("ambassadorTitle")}
-          </p>
-          
           {/* Powered by Cursor */}
-          <div className="mt-4 flex items-center gap-2 rounded-full border border-border bg-background/50 px-4 py-2 backdrop-blur-sm">
+          <div className="flex items-center gap-2 rounded-full border border-border bg-background/50 px-4 py-2 backdrop-blur-sm">
             <span className="text-xs text-muted">{t("poweredBy")}</span>
             <svg
               className="h-4 w-4"
