@@ -8,6 +8,7 @@ interface Article {
   title: string;
   slug: string;
   content: string;
+  pdfUrl: string | null;
   order: number;
   isPublished: boolean;
   categoryId: string;
@@ -36,6 +37,7 @@ export default function DocsAdminPage() {
     title: "",
     slug: "",
     content: "",
+    pdfUrl: "",
     categoryId: "",
     isPublished: true,
   });
@@ -105,6 +107,7 @@ export default function DocsAdminPage() {
         title: article.title,
         slug: article.slug,
         content: article.content,
+        pdfUrl: article.pdfUrl || "",
         categoryId: article.categoryId,
         isPublished: article.isPublished,
       });
@@ -114,6 +117,7 @@ export default function DocsAdminPage() {
         title: "",
         slug: "",
         content: "",
+        pdfUrl: "",
         categoryId,
         isPublished: true,
       });
@@ -271,6 +275,11 @@ export default function DocsAdminPage() {
                             <h4 className="font-medium text-white">{article.title}</h4>
                             <p className="text-sm text-gray-400">/{article.slug}</p>
                           </div>
+                          {article.pdfUrl && (
+                            <span className="rounded bg-blue-500/20 px-2 py-0.5 text-xs text-blue-400">
+                              📎 PDF
+                            </span>
+                          )}
                           {!article.isPublished && (
                             <span className="rounded bg-yellow-500/20 px-2 py-0.5 text-xs text-yellow-400">
                               Rascunho
@@ -422,6 +431,21 @@ export default function DocsAdminPage() {
                   className="h-64 w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 font-mono text-sm text-white"
                   placeholder="# Título&#10;&#10;Escreva seu conteúdo em Markdown..."
                 />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm text-gray-400">
+                  URL do PDF (opcional)
+                </label>
+                <input
+                  type="url"
+                  value={articleForm.pdfUrl}
+                  onChange={(e) => setArticleForm({ ...articleForm, pdfUrl: e.target.value })}
+                  className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-white"
+                  placeholder="https://exemplo.com/documento.pdf"
+                />
+                <p className="mt-1 text-xs text-gray-500">
+                  Cole o link de um PDF externo (Google Drive, Dropbox, etc.)
+                </p>
               </div>
               <div className="flex items-center gap-2">
                 <input

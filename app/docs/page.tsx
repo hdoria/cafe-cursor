@@ -25,6 +25,7 @@ interface FullArticle {
   title: string;
   slug: string;
   content: string;
+  pdfUrl: string | null;
   category: {
     id: string;
     name: string;
@@ -181,6 +182,19 @@ export default function DocsPage() {
                   <h1 className="text-4xl font-bold text-white">
                     {selectedArticle.title}
                   </h1>
+                  {selectedArticle.pdfUrl && (
+                    <a
+                      href={selectedArticle.pdfUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-4 inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700"
+                    >
+                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                      Baixar PDF
+                    </a>
+                  )}
                 </div>
 
                 <div className="prose-headings:text-white prose-p:text-gray-300 prose-strong:text-white prose-code:rounded prose-code:bg-white/10 prose-code:px-1 prose-code:py-0.5 prose-code:text-gray-200 prose-pre:bg-[#1a1a1a] prose-pre:border prose-pre:border-white/10 prose-a:text-blue-400 prose-a:no-underline hover:prose-a:underline prose-li:text-gray-300 prose-blockquote:border-l-white/30 prose-blockquote:text-gray-400">

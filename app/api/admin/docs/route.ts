@@ -69,7 +69,7 @@ export async function POST(request: Request) {
     }
 
     if (action === "createArticle") {
-      const { title, slug, content, categoryId, isPublished } = data;
+      const { title, slug, content, pdfUrl, categoryId, isPublished } = data;
       const maxOrder = await prisma.docArticle.aggregate({
         where: { categoryId },
         _max: { order: true },
@@ -79,6 +79,7 @@ export async function POST(request: Request) {
           title,
           slug,
           content,
+          pdfUrl: pdfUrl || null,
           categoryId,
           isPublished: isPublished ?? true,
           order: (maxOrder._max.order || 0) + 1,
@@ -88,10 +89,10 @@ export async function POST(request: Request) {
     }
 
     if (action === "updateArticle") {
-      const { id, title, slug, content, categoryId, isPublished, order } = data;
+      const { id, title, slug, content, pdfUrl, categoryId, isPublished, order } = data;
       const article = await prisma.docArticle.update({
         where: { id },
-        data: { title, slug, content, categoryId, isPublished, order },
+        data: { title, slug, content, pdfUrl, categoryId, isPublished, order },
       });
       return NextResponse.json({ article });
     }

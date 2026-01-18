@@ -66,6 +66,7 @@ model DocArticle {
   title      String
   slug       String      @unique
   content    String      // Conteúdo em Markdown
+  pdfUrl     String?     // URL do PDF anexado (opcional)
   order      Int         @default(0)
   isPublished Boolean    @default(true)
   createdAt  DateTime    @default(now())
