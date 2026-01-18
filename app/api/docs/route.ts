@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export async function GET() {
   try {
     const categories = await prisma.docCategory.findMany({
@@ -14,12 +17,15 @@ export async function GET() {
             title: true,
             slug: true,
             order: true,
+            categoryId: true,
           },
         },
       },
     });
 
-    return NextResponse.json({ categories });
+    const response = NextResponse.json({ categories });
+    response.headers.set("Cache-Control", "no-store, no-cache, must-revalidate");
+    return response;
   } catch (error) {
     console.error("Error fetching docs:", error);
     return NextResponse.json(
