@@ -18,8 +18,9 @@ export default function Home() {
       {/* Fundo com grid */}
       <div className="pointer-events-none fixed inset-0 bg-grid-pattern opacity-40" />
 
-      {/* Seletor de idioma - fixo no topo direito */}
-      <div className="fixed right-4 top-4 z-50">
+      {/* Barra de navegação - fixo no topo direito */}
+      <div className="fixed right-4 top-4 z-50 flex items-center gap-3">
+        <DocsButton />
         <LanguageSelector />
       </div>
 
@@ -67,9 +68,6 @@ export default function Home() {
       {/* Footer */}
       <footer className="mt-16 text-center animate-fade-in" style={{ animationDelay: "0.2s" }}>
         <div className="flex flex-col items-center gap-4">
-          {/* Botão de documentação */}
-          <DocsButton />
-          
           {/* Powered by Cursor */}
           <div className="flex items-center gap-2 rounded-full border border-border bg-background/50 px-4 py-2 backdrop-blur-sm">
             <span className="text-xs text-muted">{t("poweredBy")}</span>
