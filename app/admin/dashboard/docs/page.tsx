@@ -166,6 +166,22 @@ export default function DocsAdminPage() {
     await handleAction("updateArticle", { id: article.id, isPublished: !article.isPublished });
   };
 
+  const moveCategoryUp = async (index: number) => {
+    if (index === 0) return;
+    const newCategories = [...categories];
+    [newCategories[index - 1], newCategories[index]] = [newCategories[index], newCategories[index - 1]];
+    const categoryIds = newCategories.map(c => c.id);
+    await handleAction("reorderCategories", { categoryIds });
+  };
+
+  const moveCategoryDown = async (index: number) => {
+    if (index === categories.length - 1) return;
+    const newCategories = [...categories];
+    [newCategories[index], newCategories[index + 1]] = [newCategories[index + 1], newCategories[index]];
+    const categoryIds = newCategories.map(c => c.id);
+    await handleAction("reorderCategories", { categoryIds });
+  };
+
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
@@ -223,13 +239,39 @@ export default function DocsAdminPage() {
           </div>
         ) : (
           <div className="space-y-6">
-            {categories.map((category) => (
+            {categories.map((category, index) => (
               <div
                 key={category.id}
                 className="rounded-xl border border-white/10 bg-white/5 overflow-hidden"
               >
                 <div className="flex items-center justify-between border-b border-white/10 p-4">
                   <div className="flex items-center gap-3">
+                    <div className="flex flex-col gap-0.5">
+                      <button
+                        onClick={() => moveCategoryUp(index)}
+                        disabled={index === 0}
+                        className={`rounded p-1 text-xs transition-colors ${
+                          index === 0
+                            ? "text-gray-600 cursor-not-allowed"
+                            : "text-gray-400 hover:bg-white/10 hover:text-white"
+                        }`}
+                        title="Mover para cima"
+                      >
+                        ▲
+                      </button>
+                      <button
+                        onClick={() => moveCategoryDown(index)}
+                        disabled={index === categories.length - 1}
+                        className={`rounded p-1 text-xs transition-colors ${
+                          index === categories.length - 1
+                            ? "text-gray-600 cursor-not-allowed"
+                            : "text-gray-400 hover:bg-white/10 hover:text-white"
+                        }`}
+                        title="Mover para baixo"
+                      >
+                        ▼
+                      </button>
+                    </div>
                     <span className="text-2xl">📁</span>
                     <div>
                       <h3 className="font-semibold text-white">{category.name}</h3>

@@ -103,6 +103,18 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: true });
     }
 
+    if (action === "reorderCategories") {
+      const { categoryIds } = data;
+      const updates = categoryIds.map((id: string, index: number) =>
+        prisma.docCategory.update({
+          where: { id },
+          data: { order: index + 1 },
+        })
+      );
+      await prisma.$transaction(updates);
+      return NextResponse.json({ success: true });
+    }
+
     return NextResponse.json({ error: "Ação inválida" }, { status: 400 });
   } catch (error) {
     console.error("Error managing docs:", error);
