@@ -3,6 +3,7 @@
 import { RegisterForm } from "@/components/RegisterForm";
 import { AvailabilityBadge } from "@/components/AvailabilityBadge";
 import { LanguageSelector } from "@/components/LanguageSelector";
+import { DocsButton } from "@/components/DocsButton";
 import { useLanguage } from "@/components/LanguageContext";
 
 /**
@@ -65,7 +66,10 @@ export default function Home() {
 
       {/* Footer */}
       <footer className="mt-16 text-center animate-fade-in" style={{ animationDelay: "0.2s" }}>
-        <div className="flex flex-col items-center gap-3">
+        <div className="flex flex-col items-center gap-4">
+          {/* Botão de documentação */}
+          <DocsButton />
+          
           {/* Powered by Cursor */}
           <div className="flex items-center gap-2 rounded-full border border-border bg-background/50 px-4 py-2 backdrop-blur-sm">
             <span className="text-xs text-muted">{t("poweredBy")}</span>

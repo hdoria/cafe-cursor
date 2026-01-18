@@ -58,6 +58,9 @@ export const translations = {
     
     // Email
     emailSent: "📧 Enviamos o crédito para seu email!",
+    
+    // Docs
+    viewDocs: "Ver documentação",
   },
   "en": {
     // Header
@@ -116,6 +119,9 @@ export const translations = {
     
     // Email
     emailSent: "📧 We sent the credit to your email!",
+    
+    // Docs
+    viewDocs: "View documentation",
   },
   "es": {
     // Header
@@ -174,6 +180,9 @@ export const translations = {
     
     // Email
     emailSent: "📧 ¡Enviamos el crédito a tu correo!",
+    
+    // Docs
+    viewDocs: "Ver documentación",
   },
 } as const;
 
