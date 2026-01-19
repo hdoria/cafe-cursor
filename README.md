@@ -9,12 +9,15 @@
 
 ## ✨ Features
 
-- **🔐 Secure Registration** - Only pre-approved attendees can claim credits
+- **🔐 Secure Registration** - Only pre-approved attendees with check-in can claim credits
+- **✅ Check-in System** - Luma-style modal for event check-in verification
 - **📧 Email Notifications** - Automatic email with credit details via Resend
-- **🌍 Multi-language** - English and Brazilian Portuguese support
+- **🌍 Multi-language** - Portuguese (default), English, and Spanish support
+- **📚 Documentation Section** - Public docs with Cursor IDE best practices and PDF attachments
 - **📱 Responsive Design** - Beautiful dark theme, works on all devices
-- **👤 Admin Panel** - Manage credits and users with ease
-- **🐦 Social Sharing** - One-click share to X (Twitter)
+- **👤 Admin Panel** - Manage credits, users, documentation, and categories
+- **📥 CSV Import** - Bulk import credits and Luma guests
+- **🔄 Category Reordering** - Drag categories up/down in admin panel
 - **⚡ Fast & Modern** - Built with Next.js 14 App Router
 
 ## 🚀 Quick Start
@@ -41,12 +44,12 @@ cp .env.example .env
 Edit `.env` with your values:
 
 ```env
-# Database (for local development)
-DATABASE_URL="file:./dev.db"
+# Database
+DATABASE_URL="postgresql://user:password@host:5432/database"
 
 # Resend API (get free key at resend.com)
 RESEND_API_KEY="re_your_api_key"
-FROM_EMAIL="Your Event <onboarding@resend.dev>"
+FROM_EMAIL="Your Event <noreply@yourdomain.com>"
 
 # Admin credentials
 ADMIN_USERNAME="admin"
@@ -72,17 +75,17 @@ npx tsx prisma/seed.ts
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) 🎉
+Open [http://localhost:5000](http://localhost:5000)
 
 ## 📊 Admin Panel
 
 Access the admin panel at `/admin`:
 
 - **Dashboard** - View credit statistics and user registrations
-- **User Management** - See who claimed credits
+- **User Management** - Manage eligible users and check-in status
 - **Credit Management** - Track available and used credits
-
-Default credentials: `admin` / `cafecursor2024`
+- **Documentation** - Create and manage docs with categories, articles, and PDF attachments
+- **CSV Import** - Bulk import credits and Luma guests
 
 ## 📦 Data Import
 
@@ -96,48 +99,36 @@ https://cursor.com/referral?code=ABC123
 https://cursor.com/referral?code=DEF456
 ```
 
-### Import Eligible Users (CSV)
+### Import Eligible Users from Luma (CSV)
 
-Create a CSV file with pre-approved attendees:
+Export guests from Luma and import directly:
 
 ```csv
-email,name,company,approval_status
-john@email.com,John Doe,Acme Inc,approved
-jane@email.com,Jane Smith,Tech Corp,approved
+email,name,company,approval_status,checked_in
+john@email.com,John Doe,Acme Inc,approved,true
+jane@email.com,Jane Smith,Tech Corp,approved,false
 ```
 
-Place both files in the project root and update `prisma/seed.ts` with your file paths.
+## 📚 Documentation System
 
-## 🌐 Deploy to Vercel
+The documentation system allows you to:
 
-### 1. Push to GitHub
+- Create categories to organize content
+- Write articles in Markdown format
+- Attach PDF files to articles (external URLs)
+- Reorder categories with up/down arrows
+- Publish/unpublish articles
+- View public documentation at `/docs`
 
-```bash
-git init
-git add .
-git commit -m "Initial commit"
-git remote add origin https://github.com/YOUR_USERNAME/cafe-cursor.git
-git push -u origin main
-```
+## 🌐 Multi-language Support
 
-### 2. Deploy on Vercel
+The application supports three languages:
 
-1. Go to [vercel.com](https://vercel.com) and import your repository
-2. Add environment variables in Vercel dashboard:
-   - `DATABASE_URL` - Your PostgreSQL connection string
-   - `DIRECT_URL` - Direct database URL (same as DATABASE_URL for most providers)
-   - `RESEND_API_KEY` - Your Resend API key
-   - `FROM_EMAIL` - Sender email address
-   - `ADMIN_USERNAME` - Admin username
-   - `ADMIN_PASSWORD` - Admin password
+- **Portuguese (PT-BR)** - Default language
+- **English (EN)**
+- **Spanish (ES)**
 
-3. Deploy! 🚀
-
-### Recommended Database Providers
-
-- **[Vercel Postgres](https://vercel.com/docs/storage/vercel-postgres)** - Seamless integration
-- **[Supabase](https://supabase.com)** - Free tier available
-- **[Neon](https://neon.tech)** - Serverless Postgres
+Users can switch languages using the dropdown selector with country flags in the header.
 
 ## 🛠️ Tech Stack
 
@@ -146,9 +137,9 @@ git push -u origin main
 | [Next.js 14](https://nextjs.org) | React framework with App Router |
 | [TypeScript](https://typescriptlang.org) | Type safety |
 | [Prisma](https://prisma.io) | Database ORM |
+| [PostgreSQL](https://postgresql.org) | Database |
 | [Tailwind CSS](https://tailwindcss.com) | Styling |
 | [Resend](https://resend.com) | Email delivery |
-| [Zod](https://zod.dev) | Schema validation |
 
 ## 📁 Project Structure
 
@@ -156,12 +147,23 @@ git push -u origin main
 cafe-cursor/
 ├── app/
 │   ├── admin/           # Admin panel pages
+│   │   └── dashboard/
+│   │       ├── docs/    # Documentation management
+│   │       ├── credits/ # Credits management
+│   │       └── users/   # User management
 │   ├── api/             # API routes
+│   ├── docs/            # Public documentation page
 │   ├── globals.css      # Global styles
 │   ├── layout.tsx       # Root layout
 │   └── page.tsx         # Landing page
 ├── components/          # React components
+│   ├── LanguageSelector.tsx
+│   ├── DocsButton.tsx
+│   └── ...
 ├── lib/                 # Utilities and helpers
+│   ├── prisma.ts        # Prisma client
+│   ├── translations.ts  # i18n translations
+│   └── auth.ts          # Authentication helpers
 ├── prisma/
 │   ├── schema.prisma    # Database schema
 │   └── seed.ts          # Seed script
@@ -193,9 +195,23 @@ Edit CSS variables in `app/globals.css`:
 :root {
   --foreground: #your-color;
   --background: #your-color;
-  /* ... */
 }
 ```
+
+## 🚀 Deployment
+
+### Deploy on Replit
+
+1. Import the repository to Replit
+2. Configure environment variables in the Secrets tab
+3. Click "Deploy" to publish
+
+### Deploy on Vercel
+
+1. Push to GitHub
+2. Import repository on Vercel
+3. Add environment variables
+4. Deploy
 
 ## 🤝 Contributing
 
