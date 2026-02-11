@@ -472,15 +472,17 @@ export default function AdminDashboard() {
                       )}
                     </td>
                     <td className="px-4 py-3">
-                      {credit.isUsed ? (
-                        <span className="rounded-full bg-orange-500/20 px-2 py-1 text-xs text-orange-400">
-                          Usado
-                        </span>
-                      ) : (
-                        <span className="rounded-full bg-green-500/20 px-2 py-1 text-xs text-green-400">
-                          Disponível
-                        </span>
-                      )}
+                      <button
+                        onClick={() => executeAction("TOGGLE_CREDIT_USED", { creditId: credit.id })}
+                        className={`rounded-full px-2 py-1 text-xs transition-colors ${
+                          credit.isUsed
+                            ? "bg-orange-500/20 text-orange-400 hover:bg-orange-500/30"
+                            : "bg-green-500/20 text-green-400 hover:bg-green-500/30"
+                        }`}
+                        title={credit.isUsed ? "Clique para marcar como disponível" : "Clique para marcar como usado"}
+                      >
+                        {credit.isUsed ? "Usado" : "Disponível"}
+                      </button>
                     </td>
                     <td className="px-4 py-3">
                       {credit.assignedTo ? (

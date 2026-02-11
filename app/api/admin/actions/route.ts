@@ -331,6 +331,68 @@ export async function POST(request: NextRequest) {
         });
       }
 
+      case "TOGGLE_CREDIT_USED": {
+        const { creditId } = data;
+
+        const credit = await prisma.credit.findUnique({
+          where: { id: creditId },
+          include: { assignedTo: true },
+        });
+
+        if (!credit) {
+          return NextResponse.json(
+            { error: "Crédito não encontrado" },
+            { status: 404 }
+          );
+        }
+
+        const newState = !credit.isUsed;
+        const newLabel = newState ? "usado" : "disponível";
+
+        if (credit.isUsed && credit.assignedTo) {
+          await prisma.$transaction([
+            prisma.eligibleUser.update({
+              where: { id: credit.assignedTo.id },
+              data: {
+                hasClaimed: false,
+                claimedAt: null,
+                creditId: null,
+              },
+            }),
+            prisma.credit.update({
+              where: { id: creditId },
+              data: {
+                isUsed: false,
+                assignedAt: null,
+              },
+            }),
+          ]);
+        } else if (credit.isUsed) {
+          await prisma.credit.update({
+            where: { id: creditId },
+            data: {
+              isUsed: false,
+              assignedAt: null,
+            },
+          });
+        } else {
+          await prisma.credit.update({
+            where: { id: creditId },
+            data: {
+              isUsed: true,
+              assignedAt: new Date(),
+            },
+          });
+        }
+
+        console.log(`🔄 [ADMIN] Crédito ${credit.code} marcado como ${newLabel}`);
+
+        return NextResponse.json({
+          success: true,
+          message: `Crédito ${credit.code} marcado como ${newLabel}`,
+        });
+      }
+
       case "SEND_CREDIT_EMAIL": {
         // Enviar/reenviar email con el link del crédito
         const { userId, locale } = data;
