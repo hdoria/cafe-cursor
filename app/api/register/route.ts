@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           success: false,
-          error: "Nenhum evento ativo no momento. Por favor contacta al organizador.",
+          error: "Nenhum evento ativo no momento. Por favor, procure o organizador.",
           code: "NO_ACTIVE_EVENT",
         },
         { status: 503 }
@@ -129,28 +129,42 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 5. Asignar crédito en una transacción
+    // 5. Asignar crédito en una transacción (con guardas contra race conditions)
     const result = await prisma.$transaction(async (tx) => {
-      // Actualizar usuario como que ya reclamó
-      const updatedUser = await tx.eligibleUser.update({
-        where: { id: eligibleUser.id },
+      // Marcar al usuario como reclamado — solo si aún no reclamó
+      const userUpdate = await tx.eligibleUser.updateMany({
+        where: { id: eligibleUser.id, hasClaimed: false },
         data: {
-          name: name || eligibleUser.name, // Actualizar nombre si se proporcionó
+          name: name || eligibleUser.name,
           hasClaimed: true,
           claimedAt: new Date(),
           creditId: availableCredit.id,
         },
       });
 
-      // Marcar crédito como usado
-      await tx.credit.update({
-        where: { id: availableCredit.id },
+      if (userUpdate.count === 0) {
+        throw new Error("ALREADY_CLAIMED");
+      }
+
+      // Marcar crédito como usado — solo si sigue disponible
+      const creditUpdate = await tx.credit.updateMany({
+        where: { id: availableCredit.id, isUsed: false },
         data: {
           isUsed: true,
           assignedAt: new Date(),
         },
       });
 
+      if (creditUpdate.count === 0) {
+        throw new Error("CREDIT_TAKEN");
+      }
+
+      const updatedUser = await tx.eligibleUser.findUnique({
+        where: { id: eligibleUser.id },
+      });
+      if (!updatedUser) {
+        throw new Error("USER_NOT_FOUND");
+      }
       return updatedUser;
     });
 
@@ -195,6 +209,19 @@ export async function POST(request: NextRequest) {
           code: "VALIDATION_ERROR",
         },
         { status: 400 }
+      );
+    }
+
+    // Conflicto de concurrencia (doble click / crédito tomado): pedir reintento
+    if (error instanceof Error && (error.message === "ALREADY_CLAIMED" || error.message === "CREDIT_TAKEN")) {
+      console.log(`⚠️ [REGISTER] Conflicto de concurrencia: ${error.message}`);
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Tu solicitud ya está siendo procesada. Por favor intenta de nuevo en unos segundos.",
+          code: "RETRY",
+        },
+        { status: 409 }
       );
     }
 
