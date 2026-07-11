@@ -24,11 +24,22 @@ export async function POST(request: NextRequest) {
 
     switch (action) {
       case "ASSIGN_CREDIT": {
-        // Asignar crédito manualmente a un usuario
+        // Asignar crédito manualmente a un usuario (del evento activo)
         const { email, useTestCredit } = data;
-        
+
+        const activeEvent = await prisma.event.findFirst({
+          where: { isActive: true },
+        });
+
+        if (!activeEvent) {
+          return NextResponse.json(
+            { error: "Nenhum evento ativo" },
+            { status: 400 }
+          );
+        }
+
         const eligibleUser = await prisma.eligibleUser.findUnique({
-          where: { email },
+          where: { email_eventId: { email, eventId: activeEvent.id } },
         });
 
         if (!eligibleUser) {
@@ -140,16 +151,27 @@ export async function POST(request: NextRequest) {
       }
 
       case "ADD_ELIGIBLE_USER": {
-        // Agregar usuario elegible manualmente
+        // Agregar usuario elegible manualmente (al evento activo)
         const { email, name, company, approvalStatus } = data;
 
+        const activeEvent = await prisma.event.findFirst({
+          where: { isActive: true },
+        });
+
+        if (!activeEvent) {
+          return NextResponse.json(
+            { error: "Nenhum evento ativo. Crie e ative um evento primeiro." },
+            { status: 400 }
+          );
+        }
+
         const existing = await prisma.eligibleUser.findUnique({
-          where: { email },
+          where: { email_eventId: { email, eventId: activeEvent.id } },
         });
 
         if (existing) {
           return NextResponse.json(
-            { error: "El usuario ya existe" },
+            { error: "El usuario ya existe en este evento" },
             { status: 400 }
           );
         }
@@ -160,10 +182,11 @@ export async function POST(request: NextRequest) {
             name,
             company: company || null,
             approvalStatus: approvalStatus || "approved",
+            eventId: activeEvent.id,
           },
         });
 
-        console.log(`➕ [ADMIN] Usuario elegible agregado: ${email}`);
+        console.log(`➕ [ADMIN] Usuario elegible agregado: ${email} (evento: ${activeEvent.name})`);
 
         return NextResponse.json({
           success: true,
@@ -440,6 +463,67 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({
           success: true,
           message: `Email enviado a ${user.email}`,
+        });
+      }
+
+      case "ADD_EVENT": {
+        // Criar evento; opcionalmente já ativar (desativando os demais)
+        const { name, date, setActive } = data;
+
+        if (!name || typeof name !== "string" || !name.trim()) {
+          return NextResponse.json(
+            { error: "Nome do evento é obrigatório" },
+            { status: 400 }
+          );
+        }
+
+        const newEvent = await prisma.$transaction(async (tx) => {
+          if (setActive) {
+            await tx.event.updateMany({ data: { isActive: false } });
+          }
+          return tx.event.create({
+            data: {
+              name: name.trim(),
+              date: date ? new Date(date) : null,
+              isActive: Boolean(setActive),
+            },
+          });
+        });
+
+        console.log(`🗓 [ADMIN] Evento criado: ${newEvent.name} (ativo: ${newEvent.isActive})`);
+
+        return NextResponse.json({
+          success: true,
+          message: `Evento "${newEvent.name}" criado${newEvent.isActive ? " e ativado" : ""}`,
+          event: newEvent,
+        });
+      }
+
+      case "SET_ACTIVE_EVENT": {
+        // Ativar um evento (desativa todos os outros na mesma transação)
+        const { eventId } = data;
+
+        const event = await prisma.event.findUnique({ where: { id: eventId } });
+        if (!event) {
+          return NextResponse.json(
+            { error: "Evento não encontrado" },
+            { status: 404 }
+          );
+        }
+
+        await prisma.$transaction([
+          prisma.event.updateMany({ data: { isActive: false } }),
+          prisma.event.update({
+            where: { id: eventId },
+            data: { isActive: true },
+          }),
+        ]);
+
+        console.log(`🗓 [ADMIN] Evento ativado: ${event.name}`);
+
+        return NextResponse.json({
+          success: true,
+          message: `Evento "${event.name}" agora é o evento ativo`,
         });
       }
 
