@@ -79,7 +79,17 @@ async function main() {
   // Clean existing data
   console.log("🗑️  Cleaning existing data...");
   await prisma.eligibleUser.deleteMany();
+  await prisma.event.deleteMany();
   await prisma.credit.deleteMany();
+
+  // ============================================
+  // 0. CREATE ACTIVE EVENT
+  // ============================================
+  console.log("\n🗓  Creating seed event...");
+  const seedEvent = await prisma.event.create({
+    data: { name: "Evento Seed (local)", isActive: true },
+  });
+  console.log(`   ✅ Event created: ${seedEvent.name}`);
 
   // ============================================
   // 1. LOAD CREDITS FROM CSV
@@ -161,6 +171,7 @@ async function main() {
           role: row.role || null,
           approvalStatus: "approved",
           hasClaimed: false,
+          eventId: seedEvent.id,
         },
       });
       usersCreated++;
@@ -185,6 +196,7 @@ async function main() {
         role: "Tester",
         approvalStatus: "approved",
         hasClaimed: false,
+        eventId: seedEvent.id,
       },
     });
   }

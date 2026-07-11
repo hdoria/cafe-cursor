@@ -10,27 +10,44 @@ datasource db {
   url       = env("DATABASE_URL")
 }
 
+// Eventos (edições) do Cafe Cursor
+model Event {
+  id        String         @id @default(cuid())
+  name      String
+  date      DateTime?
+  isActive  Boolean        @default(false)
+  createdAt DateTime       @default(now())
+
+  users     EligibleUser[]
+}
+
 // Tabla de usuarios elegibles (pre-aprobados del evento)
 model EligibleUser {
   id             String   @id @default(cuid())
-  email          String   @unique
+  email          String
   name           String
   company        String?
   role           String?
   approvalStatus String   @default("approved")
   createdAt      DateTime @default(now())
-  
+
+  // Evento ao qual esta participação pertence
+  event          Event    @relation(fields: [eventId], references: [id])
+  eventId        String
+
   // Check-in no evento
   hasCheckedIn   Boolean  @default(false)
   checkedInAt    DateTime?
-  
+
   // Si ya reclamó su crédito
   hasClaimed     Boolean  @default(false)
   claimedAt      DateTime?
-  
+
   // Relación con el crédito asignado
   credit         Credit?  @relation(fields: [creditId], references: [id])
   creditId       String?  @unique
+
+  @@unique([email, eventId])
 }
 
 // Tabla de créditos de Cursor disponibles
