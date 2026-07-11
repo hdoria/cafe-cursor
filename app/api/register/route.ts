@@ -23,9 +23,28 @@ export async function POST(request: NextRequest) {
 
     console.log(`📝 [REGISTER] Intento de registro: ${normalizedEmail}`);
 
-    // 1. Verificar si el email está en la lista de usuarios elegibles
+    // 0. Buscar o evento ativo
+    const activeEvent = await prisma.event.findFirst({
+      where: { isActive: true },
+    });
+
+    if (!activeEvent) {
+      console.log(`❌ [REGISTER] Nenhum evento ativo configurado`);
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Nenhum evento ativo no momento. Por favor contacta al organizador.",
+          code: "NO_ACTIVE_EVENT",
+        },
+        { status: 503 }
+      );
+    }
+
+    // 1. Verificar si el email está en la lista del evento activo
     const eligibleUser = await prisma.eligibleUser.findUnique({
-      where: { email: normalizedEmail },
+      where: {
+        email_eventId: { email: normalizedEmail, eventId: activeEvent.id },
+      },
       include: { credit: true },
     });
 
@@ -198,11 +217,26 @@ export async function POST(request: NextRequest) {
  */
 export async function GET() {
   try {
-    const [availableReal, availableTest, totalEligible, claimed] = await Promise.all([
+    const activeEvent = await prisma.event.findFirst({
+      where: { isActive: true },
+    });
+
+    if (!activeEvent) {
+      return NextResponse.json({
+        available: false,
+        remaining: 0,
+        stats: { totalEligible: 0, claimed: 0, pending: 0 },
+      });
+    }
+
+    const [availableReal, totalEligible, claimed] = await Promise.all([
       prisma.credit.count({ where: { isUsed: false, isTest: false } }),
-      prisma.credit.count({ where: { isUsed: false, isTest: true } }),
-      prisma.eligibleUser.count({ where: { approvalStatus: "approved" } }),
-      prisma.eligibleUser.count({ where: { hasClaimed: true } }),
+      prisma.eligibleUser.count({
+        where: { approvalStatus: "approved", eventId: activeEvent.id },
+      }),
+      prisma.eligibleUser.count({
+        where: { hasClaimed: true, eventId: activeEvent.id },
+      }),
     ]);
 
     return NextResponse.json({
