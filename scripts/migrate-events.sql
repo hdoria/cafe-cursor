@@ -1,6 +1,13 @@
 -- Migração: suporte multi-evento (executar UMA vez no Supabase SQL editor)
 -- Spec: docs/superpowers/specs/2026-07-11-events-design.md
 -- Tudo em uma transação: ou aplica inteiro, ou nada.
+--
+-- ORDEM DE DEPLOY (obrigatória):
+--   1. Rodar este script no Supabase (ANTES do deploy do código novo).
+--   2. Deploy do código novo.
+-- Durante a janela entre 1 e 2: resgates continuam funcionando, mas NÃO usar
+-- import de guests nem "adicionar usuário" no admin (o código antigo não
+-- preenche eventId e o INSERT falharia).
 
 BEGIN;
 
