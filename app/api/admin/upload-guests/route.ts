@@ -39,6 +39,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const activeEvent = await prisma.event.findFirst({
+      where: { isActive: true },
+    });
+
+    if (!activeEvent) {
+      return NextResponse.json(
+        { error: "Nenhum evento ativo. Crie e ative um evento antes de importar guests." },
+        { status: 400 }
+      );
+    }
+
     const lines = csvContent
       .split("\n")
       .map((line: string) => line.trim())
@@ -97,13 +108,15 @@ export async function POST(request: NextRequest) {
         name = email.split("@")[0];
       }
 
-      // Check if user already exists
+      // Check if user already exists in the active event
       const existing = await prisma.eligibleUser.findUnique({
-        where: { email },
+        where: {
+          email_eventId: { email, eventId: activeEvent.id },
+        },
       });
 
       if (existing) {
-        errors.push(`Linha ${i + 1}: ${email} já existe`);
+        errors.push(`Linha ${i + 1}: ${email} já existe neste evento`);
         continue;
       }
 
@@ -117,6 +130,7 @@ export async function POST(request: NextRequest) {
           data: {
             email: guest.email,
             name: guest.name,
+            eventId: activeEvent.id,
           },
         });
         inserted++;
@@ -127,7 +141,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: `${inserted} guests importados com sucesso`,
+      message: `${inserted} guests importados para "${activeEvent.name}"`,
       inserted,
       total: lines.length - 1,
       skipped: lines.length - 1 - inserted,
