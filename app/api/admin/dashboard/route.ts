@@ -16,7 +16,20 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Obtener estadísticas
+    // Eventos + evento selecionado (query param ou o ativo)
+    const events = await prisma.event.findMany({
+      orderBy: { createdAt: "desc" },
+    });
+    const activeEvent = events.find((e) => e.isActive) || null;
+    const requestedEventId = request.nextUrl.searchParams.get("eventId");
+    const selectedEventId =
+      (requestedEventId && events.some((e) => e.id === requestedEventId)
+        ? requestedEventId
+        : activeEvent?.id) ?? null;
+
+    const userWhere = selectedEventId ? { eventId: selectedEventId } : {};
+
+    // Estatísticas (créditos globais; usuários do evento selecionado)
     const [
       totalCredits,
       usedCredits,
@@ -28,12 +41,14 @@ export async function GET(request: NextRequest) {
       prisma.credit.count(),
       prisma.credit.count({ where: { isUsed: true } }),
       prisma.credit.count({ where: { isTest: true } }),
-      prisma.eligibleUser.count(),
-      prisma.eligibleUser.count({ where: { hasClaimed: true } }),
-      prisma.eligibleUser.count({ where: { approvalStatus: "approved" } }),
+      prisma.eligibleUser.count({ where: userWhere }),
+      prisma.eligibleUser.count({ where: { ...userWhere, hasClaimed: true } }),
+      prisma.eligibleUser.count({
+        where: { ...userWhere, approvalStatus: "approved" },
+      }),
     ]);
 
-    // Obtener créditos con usuarios asignados
+    // Créditos com usuários asignados (global)
     const credits = await prisma.credit.findMany({
       orderBy: [
         { isUsed: "desc" },
@@ -51,8 +66,9 @@ export async function GET(request: NextRequest) {
       take: 100,
     });
 
-    // Obtener usuarios elegibles con sus créditos
+    // Usuarios elegibles do evento selecionado
     const eligibleUsers = await prisma.eligibleUser.findMany({
+      where: userWhere,
       orderBy: [
         { hasClaimed: "desc" },
         { claimedAt: "desc" },
@@ -78,6 +94,8 @@ export async function GET(request: NextRequest) {
       },
       credits,
       eligibleUsers,
+      events,
+      selectedEventId,
     });
   } catch (error) {
     console.error("❌ [ADMIN] Error obteniendo dashboard:", error);

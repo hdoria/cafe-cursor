@@ -42,10 +42,20 @@ interface Stats {
   pendingUsers: number;
 }
 
+interface EventInfo {
+  id: string;
+  name: string;
+  date: string | null;
+  isActive: boolean;
+  createdAt: string;
+}
+
 interface DashboardData {
   stats: Stats;
   credits: Credit[];
   eligibleUsers: EligibleUser[];
+  events: EventInfo[];
+  selectedEventId: string | null;
 }
 
 /**
@@ -65,15 +75,21 @@ export default function AdminDashboard() {
   const [showUploadGuestsModal, setShowUploadGuestsModal] = useState(false);
   const [showImportDropdown, setShowImportDropdown] = useState(false);
   const [checkInUser, setCheckInUser] = useState<EligibleUser | null>(null);
+  const [showEventsModal, setShowEventsModal] = useState(false);
+  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
 
   // Verificar autenticación y cargar datos
   useEffect(() => {
     fetchDashboard();
   }, []);
 
-  const fetchDashboard = async () => {
+  const fetchDashboard = async (eventId?: string | null) => {
     try {
-      const res = await fetch("/api/admin/dashboard");
+      const targetEventId = eventId !== undefined ? eventId : selectedEventId;
+      const url = targetEventId
+        ? `/api/admin/dashboard?eventId=${encodeURIComponent(targetEventId)}`
+        : "/api/admin/dashboard";
+      const res = await fetch(url);
       if (res.status === 401) {
         router.push("/admin");
         return;
@@ -83,6 +99,7 @@ export default function AdminDashboard() {
         setError(json.error);
       } else {
         setData(json);
+        setSelectedEventId(json.selectedEventId);
       }
     } catch (err) {
       setError("Error al cargar datos");
@@ -276,6 +293,21 @@ export default function AdminDashboard() {
 
           {/* Busca e ações */}
           <div className="flex gap-2">
+            <select
+              value={selectedEventId ?? ""}
+              onChange={(e) => {
+                setLoading(true);
+                fetchDashboard(e.target.value || null);
+              }}
+              className="rounded-lg border border-gray-700 bg-gray-900 px-3 py-2 text-sm focus:border-white focus:outline-none"
+            >
+              {data?.events.length === 0 && <option value="">Sem eventos</option>}
+              {data?.events.map((ev) => (
+                <option key={ev.id} value={ev.id}>
+                  {ev.isActive ? "🟢 " : ""}{ev.name}
+                </option>
+              ))}
+            </select>
             <input
               type="text"
               placeholder="Buscar por email ou nome..."
@@ -294,6 +326,12 @@ export default function AdminDashboard() {
               className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium hover:bg-blue-700"
             >
               + Crédito
+            </button>
+            <button
+              onClick={() => setShowEventsModal(true)}
+              className="rounded-lg bg-amber-600 px-4 py-2 text-sm font-medium hover:bg-amber-700"
+            >
+              🗓 Eventos
             </button>
             <div className="relative">
               <button
@@ -326,7 +364,7 @@ export default function AdminDashboard() {
               )}
             </div>
             <button
-              onClick={fetchDashboard}
+              onClick={() => fetchDashboard()}
               disabled={actionLoading}
               className="rounded-lg border border-gray-700 px-4 py-2 text-sm hover:bg-gray-800 disabled:opacity-50"
             >
@@ -547,6 +585,22 @@ export default function AdminDashboard() {
           onSuccess={() => {
             setShowUploadGuestsModal(false);
             fetchDashboard();
+          }}
+        />
+      )}
+
+      {/* Modal Eventos */}
+      {showEventsModal && data && (
+        <EventsModal
+          events={data.events}
+          onClose={() => setShowEventsModal(false)}
+          onCreate={async (name, setActive) => {
+            await executeAction("ADD_EVENT", { name, setActive });
+            setShowEventsModal(false);
+          }}
+          onActivate={async (eventId) => {
+            await executeAction("SET_ACTIVE_EVENT", { eventId });
+            setShowEventsModal(false);
           }}
         />
       )}
@@ -1006,6 +1060,89 @@ function UploadGuestsModal({
               {loading ? "Importando..." : "Importar Guests"}
             </button>
           )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function EventsModal({
+  events,
+  onClose,
+  onCreate,
+  onActivate,
+}: {
+  events: EventInfo[];
+  onClose: () => void;
+  onCreate: (name: string, setActive: boolean) => void;
+  onActivate: (eventId: string) => void;
+}) {
+  const [name, setName] = useState("");
+  const [setActive, setSetActive] = useState(true);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+      <div className="w-full max-w-md rounded-xl border border-gray-800 bg-[#0a0a0a] p-6">
+        <h2 className="mb-4 text-lg font-bold">Eventos</h2>
+
+        <div className="mb-6 max-h-48 space-y-2 overflow-y-auto">
+          {events.length === 0 && (
+            <p className="text-sm text-gray-500">Nenhum evento criado ainda.</p>
+          )}
+          {events.map((ev) => (
+            <div
+              key={ev.id}
+              className="flex items-center justify-between rounded-lg border border-gray-800 px-3 py-2"
+            >
+              <span className="text-sm">
+                {ev.isActive ? "🟢 " : "⚪ "}{ev.name}
+              </span>
+              {!ev.isActive && (
+                <button
+                  onClick={() => {
+                    if (confirm(`Ativar "${ev.name}"? O evento ativo atual será desativado.`)) {
+                      onActivate(ev.id);
+                    }
+                  }}
+                  className="rounded border border-gray-700 px-2 py-1 text-xs hover:bg-gray-800"
+                >
+                  Ativar
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+
+        <h3 className="mb-2 text-sm font-medium text-gray-400">Criar novo evento</h3>
+        <input
+          type="text"
+          placeholder="Nome do evento (ex: Café Cursor — 2ª edição)"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          className="mb-3 w-full rounded-lg border border-gray-700 bg-gray-900 px-4 py-3 text-white placeholder:text-gray-500 focus:border-white focus:outline-none"
+        />
+        <label className="mb-4 flex items-center gap-2 text-sm text-gray-300">
+          <input
+            type="checkbox"
+            checked={setActive}
+            onChange={(e) => setSetActive(e.target.checked)}
+          />
+          Ativar imediatamente (desativa o evento ativo atual)
+        </label>
+
+        <div className="flex gap-3">
+          <button
+            onClick={onClose}
+            className="flex-1 rounded-lg border border-gray-700 py-3 hover:bg-gray-800"
+          >
+            Fechar
+          </button>
+          <button
+            onClick={() => name.trim() && onCreate(name.trim(), setActive)}
+            className="flex-1 rounded-lg bg-white py-3 font-medium text-black hover:opacity-90"
+          >
+            Criar
+          </button>
         </div>
       </div>
     </div>
