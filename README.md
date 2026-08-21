@@ -109,6 +109,15 @@ john@email.com,John Doe,Acme Inc,approved,true
 jane@email.com,Jane Smith,Tech Corp,approved,false
 ```
 
+### Sync Luma check-in (script)
+
+```bash
+ADMIN_USERNAME=... ADMIN_PASSWORD=... python3 scripts/sync-luma-checkin.py luma-guests.csv          # dry-run
+ADMIN_USERNAME=... ADMIN_PASSWORD=... python3 scripts/sync-luma-checkin.py luma-guests.csv --apply  # marca check-in
+```
+
+Lê `checked_in_at` do export do Luma e faz check-in, via API do admin, de quem está no evento ativo.
+
 ## 📚 Documentation System
 
 The documentation system allows you to:
