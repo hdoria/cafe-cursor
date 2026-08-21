@@ -24,7 +24,7 @@ interface RegisterResult {
  * Formulário de cadastro para obter crédito do Cursor
  * Apenas usuários elegíveis (aprovados no evento) podem se cadastrar
  */
-export function RegisterForm() {
+export function RegisterForm({ selfCheckin = false }: { selfCheckin?: boolean } = {}) {
   const { t, locale } = useLanguage();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -39,6 +39,22 @@ export function RegisterForm() {
     console.log(`📤 [FORM] Enviando cadastro: ${email}`);
 
     try {
+      if (selfCheckin) {
+        const checkinResponse = await fetch("/api/checkin", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: email.trim() }),
+        });
+        const checkinData: RegisterResult = await checkinResponse.json();
+        if (!checkinData.success) {
+          console.log(`⚠️ [FORM] Check-in falhou: ${checkinData.error} (code: ${checkinData.code})`);
+          setStatus("error");
+          setResult(checkinData);
+          return;
+        }
+        console.log(`✅ [FORM] Check-in ok`);
+      }
+
       const response = await fetch("/api/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -309,10 +325,10 @@ export function RegisterForm() {
                   d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
                 />
               </svg>
-              {t("submitting")}
+              {selfCheckin ? t("checkingIn") : t("submitting")}
             </span>
           ) : (
-            t("submitButton")
+            selfCheckin ? t("checkinButton") : t("submitButton")
           )}
         </button>
       </div>

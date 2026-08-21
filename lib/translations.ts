@@ -2,6 +2,12 @@ export type Locale = "pt-BR" | "en" | "es";
 
 export const translations = {
   "pt-BR": {
+    checkinTitle: "Check-in",
+    checkinSubtitle: "Confirme sua presença no evento com o email da inscrição.",
+    checkinCta: "Seu crédito do Cursor sai na mesma tela.",
+    checkinFooter: "O check-in vale só para quem está na lista do evento.",
+    checkinButton: "Fazer check-in e pegar meu crédito",
+    checkingIn: "Fazendo check-in...",
     // Header
     title: "Cafe Cursor",
     subtitle: "Obtenha seu crédito gratuito do Cursor IDE.",
@@ -63,6 +69,12 @@ export const translations = {
     viewDocs: "Ver documentação",
   },
   "en": {
+    checkinTitle: "Check-in",
+    checkinSubtitle: "Confirm you're at the event with the email you registered with.",
+    checkinCta: "Your Cursor credit shows up right here.",
+    checkinFooter: "Check-in only works for people on the event list.",
+    checkinButton: "Check in and get my credit",
+    checkingIn: "Checking in...",
     // Header
     title: "Cafe Cursor",
     subtitle: "Get your free Cursor IDE credit.",
@@ -124,6 +136,12 @@ export const translations = {
     viewDocs: "View documentation",
   },
   "es": {
+    checkinTitle: "Check-in",
+    checkinSubtitle: "Confirma tu presencia en el evento con el correo de tu registro.",
+    checkinCta: "Tu crédito de Cursor aparece en esta misma pantalla.",
+    checkinFooter: "El check-in solo funciona para quienes están en la lista del evento.",
+    checkinButton: "Hacer check-in y obtener mi crédito",
+    checkingIn: "Haciendo check-in...",
     // Header
     title: "Cafe Cursor",
     subtitle: "Obtén tu crédito gratuito de Cursor IDE.",
