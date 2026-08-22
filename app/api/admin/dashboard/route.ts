@@ -1,6 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { isAuthenticated } from "@/lib/auth";
+
+export const dynamic = "force-dynamic";
+
+const CREDIT_PAGE_SIZE = 25;
+
+const creditSorts = {
+  available: [{ isUsed: "asc" }, { createdAt: "desc" }, { id: "asc" }],
+  newest: [{ createdAt: "desc" }, { id: "asc" }],
+  oldest: [{ createdAt: "asc" }, { id: "asc" }],
+  assigned: [
+    { assignedAt: { sort: "desc", nulls: "last" } },
+    { createdAt: "desc" },
+    { id: "asc" },
+  ],
+  code: [{ code: "asc" }, { id: "asc" }],
+} satisfies Record<string, Prisma.CreditOrderByWithRelationInput[]>;
 
 /**
  * GET /api/admin/dashboard - Obtener datos del dashboard
@@ -28,6 +45,48 @@ export async function GET(request: NextRequest) {
         : activeEvent?.id) ?? null;
 
     const userWhere = selectedEventId ? { eventId: selectedEventId } : {};
+    const creditSearch = request.nextUrl.searchParams.get("creditSearch")?.trim() || "";
+    const creditStatus = request.nextUrl.searchParams.get("creditStatus") || "all";
+    const creditType = request.nextUrl.searchParams.get("creditType") || "all";
+    const requestedCreditSort =
+      request.nextUrl.searchParams.get("creditSort") || "available";
+    const creditSort = (
+      requestedCreditSort in creditSorts ? requestedCreditSort : "available"
+    ) as keyof typeof creditSorts;
+    const requestedCreditPage = Number.parseInt(
+      request.nextUrl.searchParams.get("creditPage") || "1",
+      10
+    );
+    const creditWhere: Prisma.CreditWhereInput = {};
+
+    if (creditStatus === "available") {
+      creditWhere.isUsed = false;
+    } else if (creditStatus === "used") {
+      creditWhere.isUsed = true;
+    }
+
+    if (creditType === "real") {
+      creditWhere.isTest = false;
+    } else if (creditType === "test") {
+      creditWhere.isTest = true;
+    }
+
+    if (creditSearch) {
+      creditWhere.OR = [
+        { code: { contains: creditSearch, mode: "insensitive" } },
+        { link: { contains: creditSearch, mode: "insensitive" } },
+        {
+          assignedTo: {
+            is: {
+              OR: [
+                { email: { contains: creditSearch, mode: "insensitive" } },
+                { name: { contains: creditSearch, mode: "insensitive" } },
+              ],
+            },
+          },
+        },
+      ];
+    }
 
     // Estatísticas (créditos globais; usuários do evento selecionado)
     const [
@@ -48,13 +107,20 @@ export async function GET(request: NextRequest) {
       }),
     ]);
 
-    // Créditos com usuários asignados (global)
+    const matchingCredits = await prisma.credit.count({ where: creditWhere });
+    const totalCreditPages = Math.max(
+      1,
+      Math.ceil(matchingCredits / CREDIT_PAGE_SIZE)
+    );
+    const creditPage = Math.min(
+      Math.max(Number.isFinite(requestedCreditPage) ? requestedCreditPage : 1, 1),
+      totalCreditPages
+    );
+
+    // Créditos com usuários asignados (global), consultados por página
     const credits = await prisma.credit.findMany({
-      orderBy: [
-        { isUsed: "desc" },
-        { assignedAt: "desc" },
-        { createdAt: "desc" },
-      ],
+      where: creditWhere,
+      orderBy: creditSorts[creditSort],
       include: {
         assignedTo: {
           select: {
@@ -63,7 +129,8 @@ export async function GET(request: NextRequest) {
           },
         },
       },
-      take: 100,
+      skip: (creditPage - 1) * CREDIT_PAGE_SIZE,
+      take: CREDIT_PAGE_SIZE,
     });
 
     // Usuarios elegibles do evento selecionado
@@ -93,6 +160,14 @@ export async function GET(request: NextRequest) {
         pendingUsers: approvedUsers - claimedUsers,
       },
       credits,
+      creditPagination: {
+        page: creditPage,
+        pageSize: CREDIT_PAGE_SIZE,
+        total: matchingCredits,
+        totalPages: matchingCredits === 0 ? 0 : totalCreditPages,
+        from: matchingCredits === 0 ? 0 : (creditPage - 1) * CREDIT_PAGE_SIZE + 1,
+        to: Math.min(creditPage * CREDIT_PAGE_SIZE, matchingCredits),
+      },
       eligibleUsers,
       events,
       selectedEventId,

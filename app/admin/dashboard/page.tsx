@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 
 interface Credit {
@@ -50,9 +50,19 @@ interface EventInfo {
   createdAt: string;
 }
 
+interface CreditPagination {
+  page: number;
+  pageSize: number;
+  total: number;
+  totalPages: number;
+  from: number;
+  to: number;
+}
+
 interface DashboardData {
   stats: Stats;
   credits: Credit[];
+  creditPagination: CreditPagination;
   eligibleUsers: EligibleUser[];
   events: EventInfo[];
   selectedEventId: string | null;
@@ -69,6 +79,12 @@ export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState<"users" | "credits">("users");
   const [actionLoading, setActionLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [creditSearchInput, setCreditSearchInput] = useState("");
+  const [creditStatus, setCreditStatus] = useState<"all" | "available" | "used">("available");
+  const [creditType, setCreditType] = useState<"all" | "real" | "test">("all");
+  const [creditSort, setCreditSort] = useState<"available" | "newest" | "oldest" | "assigned" | "code">("available");
+  const [creditPage, setCreditPage] = useState(1);
+  const [creditsLoading, setCreditsLoading] = useState(false);
   const [showAddUserModal, setShowAddUserModal] = useState(false);
   const [showAddCreditModal, setShowAddCreditModal] = useState(false);
   const [showUploadCsvModal, setShowUploadCsvModal] = useState(false);
@@ -77,36 +93,107 @@ export default function AdminDashboard() {
   const [checkInUser, setCheckInUser] = useState<EligibleUser | null>(null);
   const [showEventsModal, setShowEventsModal] = useState(false);
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+  const dashboardRequestId = useRef(0);
+  const creditSearchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const creditQuery = useRef<{
+    eventId: string | null;
+    page: number;
+    search: string;
+    status: "all" | "available" | "used";
+    type: "all" | "real" | "test";
+    sort: "available" | "newest" | "oldest" | "assigned" | "code";
+  }>({
+    eventId: null,
+    page: 1,
+    search: "",
+    status: "available",
+    type: "all",
+    sort: "available",
+  });
 
-  // Verificar autenticación y cargar datos
-  useEffect(() => {
-    fetchDashboard();
-  }, []);
+  const fetchDashboard = useCallback(async ({
+    eventId,
+    page,
+    search,
+    status,
+    type,
+    sort,
+  }: {
+    eventId?: string | null;
+    page?: number;
+    search?: string;
+    status?: "all" | "available" | "used";
+    type?: "all" | "real" | "test";
+    sort?: "available" | "newest" | "oldest" | "assigned" | "code";
+  } = {}) => {
+    const requestId = ++dashboardRequestId.current;
 
-  const fetchDashboard = async (eventId?: string | null) => {
     try {
-      const targetEventId = eventId !== undefined ? eventId : selectedEventId;
-      const url = targetEventId
-        ? `/api/admin/dashboard?eventId=${encodeURIComponent(targetEventId)}`
-        : "/api/admin/dashboard";
-      const res = await fetch(url);
+      const targetEventId =
+        eventId !== undefined ? eventId : creditQuery.current.eventId;
+      const targetPage = page ?? creditQuery.current.page;
+      const targetSearch = search ?? creditQuery.current.search;
+      const targetStatus = status ?? creditQuery.current.status;
+      const targetType = type ?? creditQuery.current.type;
+      const targetSort = sort ?? creditQuery.current.sort;
+      const params = new URLSearchParams({
+        creditPage: String(targetPage),
+        creditStatus: targetStatus,
+        creditType: targetType,
+        creditSort: targetSort,
+      });
+
+      if (targetEventId) params.set("eventId", targetEventId);
+      if (targetSearch) params.set("creditSearch", targetSearch);
+
+      creditQuery.current = {
+        eventId: targetEventId,
+        page: targetPage,
+        search: targetSearch,
+        status: targetStatus,
+        type: targetType,
+        sort: targetSort,
+      };
+      setCreditsLoading(true);
+      const res = await fetch(`/api/admin/dashboard?${params.toString()}`);
       if (res.status === 401) {
         router.push("/admin");
         return;
       }
       const json = await res.json();
+      if (requestId !== dashboardRequestId.current) return;
+
       if (json.error) {
         setError(json.error);
       } else {
         setData(json);
         setSelectedEventId(json.selectedEventId);
+        setCreditPage(json.creditPagination.page);
+        creditQuery.current.eventId = json.selectedEventId;
+        creditQuery.current.page = json.creditPagination.page;
       }
     } catch (err) {
-      setError("Error al cargar datos");
+      if (requestId === dashboardRequestId.current) {
+        setError("Error al cargar dados");
+      }
     } finally {
-      setLoading(false);
+      if (requestId === dashboardRequestId.current) {
+        setLoading(false);
+        setCreditsLoading(false);
+      }
     }
-  };
+  }, [router]);
+
+  // Verificar autenticación y cargar datos
+  useEffect(() => {
+    fetchDashboard();
+
+    return () => {
+      if (creditSearchTimer.current) {
+        clearTimeout(creditSearchTimer.current);
+      }
+    };
+  }, [fetchDashboard]);
 
   const handleLogout = async () => {
     await fetch("/api/admin/auth", { method: "DELETE" });
@@ -170,11 +257,56 @@ export default function AdminDashboard() {
       (u.company && u.company.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
-  const filteredCredits = data?.credits.filter(
-    (c) =>
-      c.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      c.link.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const updateCreditQuery = (
+    updates: Partial<{
+      search: string;
+      status: "all" | "available" | "used";
+      type: "all" | "real" | "test";
+      sort: "available" | "newest" | "oldest" | "assigned" | "code";
+    }>
+  ) => {
+    const nextSearch = updates.search ?? creditQuery.current.search;
+    const nextStatus = updates.status ?? creditQuery.current.status;
+    const nextType = updates.type ?? creditQuery.current.type;
+    const nextSort = updates.sort ?? creditQuery.current.sort;
+
+    if (updates.status !== undefined) setCreditStatus(updates.status);
+    if (updates.type !== undefined) setCreditType(updates.type);
+    if (updates.sort !== undefined) setCreditSort(updates.sort);
+    setCreditPage(1);
+    fetchDashboard({
+      page: 1,
+      search: nextSearch,
+      status: nextStatus,
+      type: nextType,
+      sort: nextSort,
+    });
+  };
+
+  const scheduleCreditSearch = (search: string) => {
+    setCreditSearchInput(search);
+
+    if (creditSearchTimer.current) {
+      clearTimeout(creditSearchTimer.current);
+    }
+
+    creditSearchTimer.current = setTimeout(() => {
+      creditSearchTimer.current = null;
+      updateCreditQuery({ search });
+    }, 350);
+  };
+
+  const changeCreditPage = (page: number) => {
+    setCreditPage(page);
+    fetchDashboard({ page });
+  };
+
+  const changeSelectedEvent = (eventId: string | null) => {
+    setSelectedEventId(eventId);
+    setCreditPage(1);
+    setLoading(true);
+    fetchDashboard({ eventId, page: 1 });
+  };
 
   if (loading) {
     return (
@@ -287,7 +419,7 @@ export default function AdminDashboard() {
                   : "border border-gray-700 hover:bg-gray-800"
               }`}
             >
-              🎫 Créditos ({data?.credits.length})
+              🎫 Créditos ({data?.stats.totalCredits || 0})
             </button>
           </div>
 
@@ -296,8 +428,7 @@ export default function AdminDashboard() {
             <select
               value={selectedEventId ?? ""}
               onChange={(e) => {
-                setLoading(true);
-                fetchDashboard(e.target.value || null);
+                changeSelectedEvent(e.target.value || null);
               }}
               className="rounded-lg border border-gray-700 bg-gray-900 px-3 py-2 text-sm focus:border-white focus:outline-none"
             >
@@ -308,13 +439,15 @@ export default function AdminDashboard() {
                 </option>
               ))}
             </select>
-            <input
-              type="text"
-              placeholder="Buscar por email ou nome..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="rounded-lg border border-gray-700 bg-gray-900 px-4 py-2 text-sm placeholder:text-gray-500 focus:border-white focus:outline-none"
-            />
+            {activeTab === "users" && (
+              <input
+                type="text"
+                placeholder="Buscar por email ou nome..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="rounded-lg border border-gray-700 bg-gray-900 px-4 py-2 text-sm placeholder:text-gray-500 focus:border-white focus:outline-none"
+              />
+            )}
             <button
               onClick={() => setShowAddUserModal(true)}
               className="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium hover:bg-green-700"
@@ -479,68 +612,162 @@ export default function AdminDashboard() {
 
         {/* Tabela de Créditos */}
         {activeTab === "credits" && (
-          <div className="overflow-x-auto rounded-xl border border-gray-800">
-            <table className="w-full text-left text-sm">
-              <thead className="border-b border-gray-800 bg-gray-900/50">
-                <tr>
-                  <th className="px-4 py-3 font-medium">Código</th>
-                  <th className="px-4 py-3 font-medium">Link</th>
-                  <th className="px-4 py-3 font-medium">Tipo</th>
-                  <th className="px-4 py-3 font-medium">Status</th>
-                  <th className="px-4 py-3 font-medium">Usuário</th>
-                  <th className="px-4 py-3 font-medium">Data</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-800">
-                {filteredCredits?.map((credit) => (
-                  <tr key={credit.id} className="hover:bg-gray-900/50">
-                    <td className="px-4 py-3 font-mono text-xs">{credit.code}</td>
-                    <td className="max-w-xs truncate px-4 py-3 font-mono text-xs text-gray-400">
-                      {credit.link}
-                    </td>
-                    <td className="px-4 py-3">
-                      {credit.isTest ? (
-                        <span className="rounded-full bg-purple-500/20 px-2 py-1 text-xs text-purple-400">
-                          TEST
-                        </span>
-                      ) : (
-                        <span className="rounded-full bg-blue-500/20 px-2 py-1 text-xs text-blue-400">
-                          Real
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3">
-                      <button
-                        onClick={() => executeAction("TOGGLE_CREDIT_USED", { creditId: credit.id })}
-                        className={`rounded-full px-2 py-1 text-xs transition-colors ${
-                          credit.isUsed
-                            ? "bg-orange-500/20 text-orange-400 hover:bg-orange-500/30"
-                            : "bg-green-500/20 text-green-400 hover:bg-green-500/30"
-                        }`}
-                        title={credit.isUsed ? "Clique para marcar como disponível" : "Clique para marcar como usado"}
-                      >
-                        {credit.isUsed ? "Usado" : "Disponível"}
-                      </button>
-                    </td>
-                    <td className="px-4 py-3">
-                      {credit.assignedTo ? (
-                        <div className="flex flex-col">
-                          <span className="text-xs text-white">{credit.assignedTo.name}</span>
-                          <span className="text-xs text-gray-500">{credit.assignedTo.email}</span>
-                        </div>
-                      ) : (
-                        <span className="text-xs text-gray-500">-</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-xs text-gray-400">
-                      {credit.assignedAt
-                        ? new Date(credit.assignedAt).toLocaleDateString("pt-BR")
-                        : "-"}
-                    </td>
+          <div className="space-y-4">
+            <div className="flex flex-wrap items-end gap-3 rounded-xl border border-gray-800 bg-gray-900/40 p-4">
+              <label className="flex min-w-56 flex-1 flex-col gap-1 text-xs text-gray-400">
+                Buscar cupom
+                <input
+                  type="search"
+                  placeholder="Código, link, nome ou email..."
+                  value={creditSearchInput}
+                  onChange={(e) => scheduleCreditSearch(e.target.value)}
+                  className="rounded-lg border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:border-white focus:outline-none"
+                />
+              </label>
+              <label className="flex flex-col gap-1 text-xs text-gray-400">
+                Disponibilidade
+                <select
+                  value={creditStatus}
+                  onChange={(e) => updateCreditQuery({ status: e.target.value as "all" | "available" | "used" })}
+                  className="rounded-lg border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-white focus:border-white focus:outline-none"
+                >
+                  <option value="available">Disponíveis</option>
+                  <option value="all">Todos os status</option>
+                  <option value="used">Usados</option>
+                </select>
+              </label>
+              <label className="flex flex-col gap-1 text-xs text-gray-400">
+                Tipo
+                <select
+                  value={creditType}
+                  onChange={(e) => updateCreditQuery({ type: e.target.value as "all" | "real" | "test" })}
+                  className="rounded-lg border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-white focus:border-white focus:outline-none"
+                >
+                  <option value="all">Todos os tipos</option>
+                  <option value="real">Reais</option>
+                  <option value="test">Teste</option>
+                </select>
+              </label>
+              <label className="flex flex-col gap-1 text-xs text-gray-400">
+                Ordenar por
+                <select
+                  value={creditSort}
+                  onChange={(e) => updateCreditQuery({ sort: e.target.value as "available" | "newest" | "oldest" | "assigned" | "code" })}
+                  className="rounded-lg border border-gray-700 bg-gray-900 px-3 py-2 text-sm text-white focus:border-white focus:outline-none"
+                >
+                  <option value="available">Disponibilidade primeiro</option>
+                  <option value="newest">Mais recentes</option>
+                  <option value="oldest">Mais antigos</option>
+                  <option value="assigned">Atribuição mais recente</option>
+                  <option value="code">Código (A–Z)</option>
+                </select>
+              </label>
+              <div className="rounded-lg bg-green-500/10 px-3 py-2 text-sm text-green-300">
+                {data?.stats.availableCredits || 0} disponíveis
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-gray-400">
+              <p>
+                {data?.creditPagination.total
+                  ? `Mostrando ${data.creditPagination.from}–${data.creditPagination.to} de ${data.creditPagination.total} cupons`
+                  : "Nenhum cupom encontrado com estes filtros"}
+              </p>
+              {creditsLoading && <span className="text-xs text-gray-500">Atualizando lista...</span>}
+            </div>
+
+            <div className="overflow-x-auto rounded-xl border border-gray-800">
+              <table className="w-full text-left text-sm">
+                <thead className="border-b border-gray-800 bg-gray-900/50">
+                  <tr>
+                    <th className="px-4 py-3 font-medium">Código</th>
+                    <th className="px-4 py-3 font-medium">Link</th>
+                    <th className="px-4 py-3 font-medium">Tipo</th>
+                    <th className="px-4 py-3 font-medium">Status</th>
+                    <th className="px-4 py-3 font-medium">Usuário</th>
+                    <th className="px-4 py-3 font-medium">Data</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-gray-800">
+                  {data?.credits.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="px-4 py-10 text-center text-gray-500">
+                        Nenhum cupom encontrado.
+                      </td>
+                    </tr>
+                  ) : (
+                    data?.credits.map((credit) => (
+                      <tr key={credit.id} className="hover:bg-gray-900/50">
+                        <td className="px-4 py-3 font-mono text-xs">{credit.code}</td>
+                        <td className="max-w-xs truncate px-4 py-3 font-mono text-xs text-gray-400">
+                          {credit.link}
+                        </td>
+                        <td className="px-4 py-3">
+                          {credit.isTest ? (
+                            <span className="rounded-full bg-purple-500/20 px-2 py-1 text-xs text-purple-400">
+                              TEST
+                            </span>
+                          ) : (
+                            <span className="rounded-full bg-blue-500/20 px-2 py-1 text-xs text-blue-400">
+                              Real
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3">
+                          <button
+                            onClick={() => executeAction("TOGGLE_CREDIT_USED", { creditId: credit.id })}
+                            disabled={actionLoading}
+                            className={`rounded-full px-2 py-1 text-xs transition-colors disabled:opacity-50 ${
+                              credit.isUsed
+                                ? "bg-orange-500/20 text-orange-400 hover:bg-orange-500/30"
+                                : "bg-green-500/20 text-green-400 hover:bg-green-500/30"
+                            }`}
+                            title={credit.isUsed ? "Clique para marcar como disponível" : "Clique para marcar como usado"}
+                          >
+                            {credit.isUsed ? "Usado" : "Disponível"}
+                          </button>
+                        </td>
+                        <td className="px-4 py-3">
+                          {credit.assignedTo ? (
+                            <div className="flex flex-col">
+                              <span className="text-xs text-white">{credit.assignedTo.name}</span>
+                              <span className="text-xs text-gray-500">{credit.assignedTo.email}</span>
+                            </div>
+                          ) : (
+                            <span className="text-xs text-gray-500">-</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-xs text-gray-400">
+                          {credit.assignedAt
+                            ? new Date(credit.assignedAt).toLocaleDateString("pt-BR")
+                            : "-"}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="flex items-center justify-end gap-3">
+              <button
+                onClick={() => changeCreditPage((data?.creditPagination.page || 1) - 1)}
+                disabled={creditsLoading || !data?.creditPagination || data.creditPagination.page <= 1}
+                className="rounded-lg border border-gray-700 px-3 py-2 text-sm hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                ← Anterior
+              </button>
+              <span className="text-sm text-gray-400">
+                Página {data?.creditPagination.totalPages ? data.creditPagination.page : 0} de {data?.creditPagination.totalPages || 0}
+              </span>
+              <button
+                onClick={() => changeCreditPage((data?.creditPagination.page || 1) + 1)}
+                disabled={creditsLoading || !data?.creditPagination || data.creditPagination.page >= data.creditPagination.totalPages}
+                className="rounded-lg border border-gray-700 px-3 py-2 text-sm hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                Próxima →
+              </button>
+            </div>
           </div>
         )}
       </div>
